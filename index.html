@@ -7,6 +7,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -489,20 +490,40 @@
 
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
+        const db = firebase.firestore();
         const provider = new firebase.auth.GoogleAuthProvider();
 
+        // Check if user's email is in the allowlist
+        async function isUserAllowed(email) {
+            const snapshot = await db.collection('allowedUsers')
+                .where('email', '==', email)
+                .limit(1)
+                .get();
+            return !snapshot.empty;
+        }
+
         // Listen for auth state changes
-        auth.onAuthStateChanged(function(user) {
+        auth.onAuthStateChanged(async function(user) {
             if (user) {
-                unlockGame();
+                const allowed = await isUserAllowed(user.email);
+                if (allowed) {
+                    unlockGame();
+                } else {
+                    // User is signed in but not on the allowlist
+                    const errorMsg = document.getElementById('errorMessage');
+                    errorMsg.textContent = 'Sorry, your account is not authorized to access this game.';
+                    errorMsg.classList.add('show');
+                    auth.signOut();
+                }
             } else {
                 showLogin();
             }
         });
 
         function signInWithGoogle() {
+            const errorMsg = document.getElementById('errorMessage');
+            errorMsg.classList.remove('show');
             auth.signInWithPopup(provider).catch(function(error) {
-                const errorMsg = document.getElementById('errorMessage');
                 errorMsg.textContent = error.message;
                 errorMsg.classList.add('show');
             });
