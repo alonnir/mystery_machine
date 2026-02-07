@@ -1333,13 +1333,17 @@
             }
 
             .game-header {
-                flex-direction: column;
-                gap: 15px;
-                align-items: flex-start;
+                flex-direction: row;
+                padding: 12px 20px;
+            }
+
+            .header-title {
+                font-size: 1.3em;
             }
 
             .header-logout {
-                align-self: flex-end;
+                padding: 6px 14px;
+                font-size: 0.8em;
             }
 
             .game-modes-grid {
@@ -1351,7 +1355,7 @@
             }
 
             .question-card {
-                padding: 30px 20px;
+                padding: 24px 18px;
             }
 
             .flip-card {
@@ -1363,7 +1367,8 @@
             }
 
             .game-content-wrapper {
-                padding: 30px 20px;
+                padding: 20px 16px;
+                align-items: flex-start;
             }
 
             .result-score {
@@ -1371,11 +1376,29 @@
             }
 
             .stats-container {
-                flex-direction: column;
+                flex-direction: row;
+                padding: 10px 16px;
+                gap: 8px;
             }
 
             .stat-pill {
-                justify-content: space-between;
+                flex: 1;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+                padding: 8px 6px;
+            }
+
+            .stat-label {
+                font-size: 0.65em;
+            }
+
+            .stat-value {
+                font-size: 1.1em;
+            }
+
+            .progress-container {
+                padding: 12px 16px;
             }
         }
 
@@ -1575,39 +1598,67 @@
             }
 
             .game-header {
-                padding: 15px 20px;
+                padding: 10px 16px;
             }
 
             .header-title {
-                font-size: 1.4em;
+                font-size: 1.2em;
+            }
+
+            .header-logout {
+                padding: 5px 12px;
+                font-size: 0.75em;
             }
 
             .stats-container {
-                padding: 15px 20px;
-                gap: 10px;
+                padding: 8px 12px;
+                gap: 6px;
             }
 
             .stat-pill {
+                padding: 6px 4px;
+                font-size: 0.85em;
+            }
+
+            .stat-label {
+                font-size: 0.6em;
+            }
+
+            .stat-value {
+                font-size: 1em;
+            }
+
+            .progress-container {
                 padding: 10px 16px;
-                font-size: 0.9em;
             }
 
             .question-card {
-                padding: 20px 15px;
+                padding: 18px 14px;
                 border-radius: 12px;
             }
 
             .word-display {
-                font-size: 1.8em;
+                font-size: 1.6em;
+                margin-bottom: 8px;
+            }
+
+            .pronunciation {
+                margin-bottom: 16px;
+                font-size: 0.85em;
             }
 
             .options {
-                gap: 10px;
+                gap: 8px;
+                margin: 16px 0;
             }
 
             .option-button {
-                padding: 12px 15px;
-                font-size: 0.9em;
+                padding: 12px 14px;
+                font-size: 0.88em;
+            }
+
+            .game-content-wrapper {
+                padding: 14px 12px;
             }
         }
     </style>
