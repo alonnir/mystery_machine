@@ -439,14 +439,16 @@
             transition: transform 0.3s ease-out;
         }
 
-        .game-mode-card:hover::before {
-            transform: scaleX(1);
-        }
+        @media (hover: hover) {
+            .game-mode-card:hover::before {
+                transform: scaleX(1);
+            }
 
-        .game-mode-card:hover {
-            transform: translateY(-8px);
-            border-color: var(--gold);
-            box-shadow: 0 20px 60px rgba(240, 194, 127, 0.15);
+            .game-mode-card:hover {
+                transform: translateY(-8px);
+                border-color: var(--gold);
+                box-shadow: 0 20px 60px rgba(240, 194, 127, 0.15);
+            }
         }
 
         .mode-icon {
@@ -1149,10 +1151,12 @@
             overflow: hidden;
         }
 
-        .option-button:hover:not(:disabled) {
-            border-color: var(--gold);
-            box-shadow: 0 0 20px rgba(240, 194, 127, 0.2);
-            transform: translateX(8px);
+        @media (hover: hover) {
+            .option-button:hover:not(:disabled) {
+                border-color: var(--gold);
+                box-shadow: 0 0 20px rgba(240, 194, 127, 0.2);
+                transform: translateX(8px);
+            }
         }
 
         .option-button:disabled {
@@ -1220,10 +1224,12 @@
             margin-top: 20px;
         }
 
-        .next-button:hover {
-            background: #6db88f;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(126, 200, 160, 0.3);
+        @media (hover: hover) {
+            .next-button:hover {
+                background: #6db88f;
+                transform: translateY(-2px);
+                box-shadow: 0 10px 30px rgba(126, 200, 160, 0.3);
+            }
         }
 
         .submit-button {
@@ -1233,10 +1239,12 @@
             margin-top: 20px;
         }
 
-        .submit-button:hover {
-            background: #d6755d;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(232, 133, 110, 0.3);
+        @media (hover: hover) {
+            .submit-button:hover {
+                background: #d6755d;
+                transform: translateY(-2px);
+                box-shadow: 0 10px 30px rgba(232, 133, 110, 0.3);
+            }
         }
 
         .menu-button {
@@ -1245,9 +1253,11 @@
             font-weight: 700;
         }
 
-        .menu-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(240, 194, 127, 0.3);
+        @media (hover: hover) {
+            .menu-button:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 15px 40px rgba(240, 194, 127, 0.3);
+            }
         }
 
         .back-button {
@@ -1258,9 +1268,11 @@
             margin-top: 15px;
         }
 
-        .back-button:hover {
-            background: var(--gold);
-            color: var(--bg-dark);
+        @media (hover: hover) {
+            .back-button:hover {
+                background: var(--gold);
+                color: var(--bg-dark);
+            }
         }
 
         /* ============================================
