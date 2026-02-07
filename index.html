@@ -742,6 +742,161 @@
             color: var(--text);
         }
 
+        .reset-progress-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--rose);
+            border-radius: 8px;
+            color: var(--rose);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .reset-progress-btn:hover {
+            background: rgba(232, 139, 139, 0.15);
+        }
+
+        .reset-confirm-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            animation: fadeUp 0.2s ease-out;
+        }
+
+        .reset-confirm-card {
+            background: var(--bg-dark);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 380px;
+            text-align: center;
+        }
+
+        .reset-confirm-card h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        .reset-confirm-card p {
+            color: var(--text-muted);
+            font-size: 0.9em;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .reset-confirm-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .reset-confirm-actions button {
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .reset-cancel-btn {
+            background: var(--glass-light);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+        }
+
+        .reset-cancel-btn:hover {
+            border-color: var(--text-muted);
+        }
+
+        .reset-nuke-btn {
+            background: var(--rose);
+            border: 1px solid var(--rose);
+            color: #1a1a2e;
+            font-weight: 600;
+        }
+
+        .reset-nuke-btn:hover {
+            box-shadow: 0 4px 20px rgba(232, 139, 139, 0.3);
+        }
+
+        .word-hide-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .word-hide-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.8em;
+            color: var(--text-muted);
+            user-select: none;
+        }
+
+        .word-hide-toggle input[type="checkbox"] {
+            appearance: none;
+            width: 36px;
+            height: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .word-hide-toggle input[type="checkbox"]::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 14px;
+            height: 14px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .word-hide-toggle input[type="checkbox"]:checked {
+            background: rgba(232, 139, 139, 0.3);
+        }
+
+        .word-hide-toggle input[type="checkbox"]:checked::after {
+            left: 19px;
+            background: var(--rose);
+        }
+
+        .word-progress-item.hidden-word {
+            opacity: 0.5;
+        }
+
+        .word-progress-item.hidden-word .word-progress-name {
+            text-decoration: line-through;
+        }
+
+        .hidden-word-badge {
+            font-size: 0.7em;
+            color: var(--rose);
+            background: rgba(232, 139, 139, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+
         /* ============================================
            GAME AREA
            ============================================ */
@@ -1302,6 +1457,7 @@
             <div class="my-words-header">
                 <div class="my-words-title">My Words</div>
                 <div class="my-words-controls">
+                    <button class="reset-progress-btn" onclick="confirmResetProgress()">Reset Progress</button>
                     <label class="weight-toggle">
                         <input type="checkbox" id="showWeightsToggle" onchange="toggleWeights()">
                         Show weights
@@ -1677,6 +1833,90 @@
             }
         }
 
+        async function toggleHideWord(wordId, hidden) {
+            if (!currentUserId) return;
+            try {
+                const docRef = db.collection('userProgress')
+                    .doc(currentUserId).collection('words').doc(wordId);
+                await docRef.set({ hidden: hidden }, { merge: true });
+                if (userProgressCache[wordId]) {
+                    userProgressCache[wordId].hidden = hidden;
+                } else {
+                    userProgressCache[wordId] = { hidden: hidden, attempts: 0 };
+                }
+                renderMyWords();
+            } catch (err) {
+                console.warn('Failed to toggle hide:', err);
+            }
+        }
+
+        function confirmResetProgress() {
+            const overlay = document.createElement('div');
+            overlay.className = 'reset-confirm-overlay';
+            overlay.innerHTML = `
+                <div class="reset-confirm-card">
+                    <h3>Reset All Progress?</h3>
+                    <p>This will clear all your stats and word weights. Every word goes back to equal priority. Hidden words will stay hidden.</p>
+                    <div class="reset-confirm-actions">
+                        <button class="reset-cancel-btn" onclick="this.closest('.reset-confirm-overlay').remove()">Cancel</button>
+                        <button class="reset-nuke-btn" onclick="executeResetProgress()">Reset</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        async function executeResetProgress() {
+            if (!currentUserId) return;
+            // Remove the overlay
+            const overlay = document.querySelector('.reset-confirm-overlay');
+            if (overlay) overlay.remove();
+
+            try {
+                // Delete all word progress docs (but preserve hidden flags)
+                const snapshot = await db.collection('userProgress')
+                    .doc(currentUserId).collection('words').get();
+                const batch = db.batch();
+                const hiddenWords = {};
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.hidden) {
+                        // Keep hidden flag, reset everything else
+                        batch.set(doc.ref, {
+                            hidden: true,
+                            attempts: 0, correct: 0, incorrect: 0,
+                            consecutiveCorrect: 0, mastered: false,
+                            lastSeen: null, word: data.word || doc.id
+                        });
+                        hiddenWords[doc.id] = true;
+                    } else {
+                        batch.delete(doc.ref);
+                    }
+                });
+
+                await batch.commit();
+
+                // Reset local caches
+                const newCache = {};
+                Object.keys(hiddenWords).forEach(id => {
+                    newCache[id] = {
+                        hidden: true, attempts: 0, correct: 0, incorrect: 0,
+                        consecutiveCorrect: 0, mastered: false, lastSeen: null
+                    };
+                });
+                userProgressCache = newCache;
+
+                totalAttempts = 0;
+                correctAnswers = 0;
+                streak = 0;
+                updateStats();
+                renderMyWords();
+            } catch (err) {
+                console.warn('Failed to reset progress:', err);
+            }
+        }
+
         function renderMyWords() {
             const container = document.getElementById('myWordsList');
 
@@ -1716,6 +1956,8 @@
                     else scoreClass = 'score-poor';
                 }
                 const masteredHtml = p.mastered ? '<span class="mastered-badge">mastered</span>' : '';
+                const hiddenHtml = p.hidden ? '<span class="hidden-word-badge">hidden</span>' : '';
+                const hiddenClass = p.hidden ? ' hidden-word' : '';
                 const streakText = p.consecutiveCorrect > 0 ? `Streak: ${p.consecutiveCorrect}` : '';
 
                 // Calculate weight components for display
@@ -1731,10 +1973,10 @@
                 const finalWeight = calculateWordWeight(p).toFixed(2);
 
                 return `
-                    <div class="word-progress-item" onclick="this.classList.toggle('expanded')">
+                    <div class="word-progress-item${hiddenClass}" onclick="this.classList.toggle('expanded')">
                         <div class="word-progress-row">
                             <div class="word-progress-left">
-                                <span class="word-progress-name">${w.word}${masteredHtml}</span>
+                                <span class="word-progress-name">${w.word}${masteredHtml}${hiddenHtml}</span>
                                 <span class="word-weight-badge">w: ${finalWeight}</span>
                                 <span class="word-progress-category">${w.category}</span>
                             </div>
@@ -1763,6 +2005,12 @@
                                     <span class="weight-component-label" style="color: var(--gold);">Final weight</span>
                                     <span class="weight-component-value" style="color: var(--gold);">${finalWeight}</span>
                                 </div>
+                            </div>
+                            <div class="word-hide-toggle" onclick="event.stopPropagation()">
+                                <label>
+                                    <input type="checkbox" ${p.hidden ? 'checked' : ''} onchange="toggleHideWord('${w.id}', this.checked)">
+                                    Don't show again
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -1840,6 +2088,13 @@
             } else {
                 candidates = [...(firebaseWordsCache[currentCategory] || [])];
             }
+
+            // Filter out hidden words
+            candidates = candidates.filter(w => {
+                const p = userProgressCache[w.id];
+                return !p || !p.hidden;
+            });
+
             if (candidates.length === 0) return getWords().slice(0, count);
 
             const weighted = candidates.map(word => ({
