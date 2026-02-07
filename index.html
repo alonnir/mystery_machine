@@ -1400,6 +1400,19 @@
             .progress-container {
                 padding: 12px 16px;
             }
+
+            /* Hide stats during active gameplay on mobile */
+            #gameContainer.game-playing .stats-container {
+                display: none;
+            }
+
+            #gameContainer.game-playing .game-header {
+                padding: 8px 16px;
+            }
+
+            #gameContainer.game-playing .header-title {
+                font-size: 1.1em;
+            }
         }
 
         /* ============================================
@@ -2607,6 +2620,7 @@
             if (autoAdvanceTimeout) { clearTimeout(autoAdvanceTimeout); autoAdvanceTimeout = null; }
 
             document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('gameContainer').classList.add('game-playing');
             const gameArea = document.getElementById('gameArea');
             gameArea.classList.add('active');
             gameArea.classList.remove('showing-results');
@@ -2617,6 +2631,7 @@
         function backToMenu() {
             if (autoAdvanceTimeout) { clearTimeout(autoAdvanceTimeout); autoAdvanceTimeout = null; }
             document.getElementById('mainMenu').style.display = 'block';
+            document.getElementById('gameContainer').classList.remove('game-playing');
             const gameArea = document.getElementById('gameArea');
             gameArea.classList.remove('active');
             gameArea.classList.remove('showing-results');
