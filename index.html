@@ -1053,6 +1053,85 @@
         const db = firebase.firestore();
         const provider = new firebase.auth.GoogleAuthProvider();
 
+        // ============================================
+        // FIRESTORE CACHE & STATE
+        // ============================================
+        let firebaseWordsCache = null;
+        let allWordsFlat = [];
+        let userProgressCache = {};
+        let currentUserId = null;
+
+        // ============================================
+        // MIGRATION (one-time, on first login)
+        // ============================================
+        async function runMigration() {
+            console.log('Starting word migration to Firestore...');
+            const batch = db.batch();
+            let count = 0;
+            Object.keys(vocabulary).forEach(category => {
+                vocabulary[category].forEach(word => {
+                    const wordId = word.word.toLowerCase().replace(/\s+/g, '_');
+                    const docRef = db.collection('words').doc(wordId);
+                    batch.set(docRef, {
+                        word: word.word,
+                        definition: word.definition,
+                        pronunciation: word.pronunciation,
+                        category: category,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                    count++;
+                });
+            });
+            await batch.commit();
+            await db.collection('migrationStatus').doc('migrateWords').set({
+                completed: true,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                wordCount: count
+            });
+            console.log('Migration complete: ' + count + ' words');
+        }
+
+        // ============================================
+        // FIRESTORE LOADING
+        // ============================================
+        async function loadWordsFromFirestore() {
+            const snapshot = await db.collection('words').get();
+            firebaseWordsCache = {};
+            allWordsFlat = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const wordObj = {
+                    id: doc.id,
+                    word: data.word,
+                    definition: data.definition,
+                    pronunciation: data.pronunciation,
+                    category: data.category
+                };
+                if (!firebaseWordsCache[data.category]) {
+                    firebaseWordsCache[data.category] = [];
+                }
+                firebaseWordsCache[data.category].push(wordObj);
+                allWordsFlat.push(wordObj);
+            });
+        }
+
+        async function loadUserProgressFromFirestore(userId) {
+            const snapshot = await db.collection('userProgress').doc(userId).collection('words').get();
+            userProgressCache = {};
+            snapshot.forEach(doc => {
+                userProgressCache[doc.id] = doc.data();
+            });
+        }
+
+        function restoreStatsFromProgress() {
+            totalAttempts = 0;
+            correctAnswers = 0;
+            Object.values(userProgressCache).forEach(p => {
+                totalAttempts += (p.attempts || 0);
+                correctAnswers += (p.correct || 0);
+            });
+        }
+
         // Check if user's email is in the allowlist
         async function isUserAllowed(email) {
             const snapshot = await db.collection('allowedUsers')
@@ -1067,7 +1146,7 @@
             if (user) {
                 const allowed = await isUserAllowed(user.email);
                 if (allowed) {
-                    unlockGame();
+                    await unlockGame();
                 } else {
                     // User is signed in but not on the allowlist
                     const errorMsg = document.getElementById('errorMessage');
@@ -1089,7 +1168,45 @@
             });
         }
 
-        function unlockGame() {
+        async function unlockGame() {
+            currentUserId = auth.currentUser.uid;
+
+            // Check if migration is needed
+            try {
+                const migDoc = await db.collection('migrationStatus').doc('migrateWords').get();
+                if (!migDoc.exists || !migDoc.data().completed) {
+                    await runMigration();
+                }
+            } catch (err) {
+                console.warn('Migration check failed:', err);
+            }
+
+            // Load words from Firestore
+            try {
+                await loadWordsFromFirestore();
+            } catch (err) {
+                console.warn('Failed to load words from Firestore, using local:', err);
+                firebaseWordsCache = {};
+                allWordsFlat = [];
+                Object.keys(vocabulary).forEach(cat => {
+                    firebaseWordsCache[cat] = vocabulary[cat].map(w => ({
+                        id: w.word.toLowerCase().replace(/\s+/g, '_'),
+                        word: w.word, definition: w.definition,
+                        pronunciation: w.pronunciation, category: cat
+                    }));
+                    allWordsFlat = allWordsFlat.concat(firebaseWordsCache[cat]);
+                });
+            }
+
+            // Load user progress
+            try {
+                await loadUserProgressFromFirestore(currentUserId);
+                restoreStatsFromProgress();
+            } catch (err) {
+                console.warn('Failed to load progress:', err);
+                userProgressCache = {};
+            }
+
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('gameContainer').classList.add('unlocked');
             updateStats();
@@ -1218,11 +1335,16 @@
         let correctAnswers = 0;
 
         function getWords() {
+            if (firebaseWordsCache) {
+                if (currentCategory === 'all') {
+                    return shuffleArray([...allWordsFlat]);
+                }
+                return shuffleArray([...(firebaseWordsCache[currentCategory] || [])]);
+            }
+            // Fallback to hardcoded
             if (currentCategory === 'all') {
                 let allWords = [];
-                Object.keys(vocabulary).forEach(cat => {
-                    allWords = allWords.concat(vocabulary[cat]);
-                });
+                Object.keys(vocabulary).forEach(cat => { allWords = allWords.concat(vocabulary[cat]); });
                 return shuffleArray(allWords);
             }
             return shuffleArray([...vocabulary[currentCategory]]);
@@ -1244,10 +1366,130 @@
             document.getElementById('accuracy').textContent = accuracy + '%';
         }
 
+        // ============================================
+        // WEIGHTED WORD SELECTION (Spaced Repetition)
+        // ============================================
+        function calculateWordWeight(progress) {
+            if (!progress || !progress.attempts || progress.attempts === 0) {
+                return 1.5; // new word boost
+            }
+            const baseWeight = progress.incorrect / Math.max(progress.attempts, 1);
+            let daysSince = 1;
+            if (progress.lastSeen) {
+                const ms = progress.lastSeen.toMillis ? progress.lastSeen.toMillis() :
+                    (typeof progress.lastSeen === 'number' ? progress.lastSeen : Date.now());
+                daysSince = Math.max(0.1, (Date.now() - ms) / (1000 * 60 * 60 * 24));
+            }
+            const recencyBoost = Math.max(1.0, Math.min(3.0, Math.sqrt(daysSince)));
+            const masteryPenalty = progress.mastered ? 0.1 : 1.0;
+            return Math.max(0.5, baseWeight * recencyBoost * masteryPenalty);
+        }
+
+        function weightedRandomChoice(probabilities) {
+            let rand = Math.random();
+            let cumulative = 0;
+            for (let i = 0; i < probabilities.length; i++) {
+                cumulative += probabilities[i];
+                if (rand < cumulative) return i;
+            }
+            return probabilities.length - 1;
+        }
+
+        function softmaxSampleWords(candidates, count) {
+            const temperature = 0.5;
+            const weights = candidates.map(c => c.weight);
+            const maxW = Math.max(...weights);
+            const expWeights = weights.map(w => Math.exp((w - maxW) / temperature));
+            const sumExp = expWeights.reduce((a, b) => a + b, 0);
+            const selected = [];
+            const remaining = expWeights.map(e => e / sumExp);
+
+            for (let i = 0; i < Math.min(count, candidates.length); i++) {
+                const idx = weightedRandomChoice(remaining);
+                selected.push(candidates[idx]);
+                remaining[idx] = 0;
+                const sum = remaining.reduce((a, b) => a + b, 0);
+                if (sum > 0) {
+                    for (let j = 0; j < remaining.length; j++) remaining[j] /= sum;
+                }
+            }
+            return selected;
+        }
+
+        function selectWordsForGame(count) {
+            let candidates;
+            if (currentCategory === 'all') {
+                candidates = [...allWordsFlat];
+            } else {
+                candidates = [...(firebaseWordsCache[currentCategory] || [])];
+            }
+            if (candidates.length === 0) return getWords().slice(0, count);
+
+            const weighted = candidates.map(word => ({
+                ...word,
+                weight: calculateWordWeight(userProgressCache[word.id])
+            }));
+            return softmaxSampleWords(weighted, count);
+        }
+
+        // ============================================
+        // PROGRESS SAVING
+        // ============================================
+        async function saveWordProgress(wordId, isCorrect) {
+            if (!currentUserId) return;
+            try {
+                const docRef = db.collection('userProgress')
+                    .doc(currentUserId).collection('words').doc(wordId);
+                const existing = userProgressCache[wordId];
+                let newData;
+
+                if (existing && existing.attempts > 0) {
+                    const attempts = (existing.attempts || 0) + 1;
+                    const correctCount = (existing.correct || 0) + (isCorrect ? 1 : 0);
+                    const incorrectCount = (existing.incorrect || 0) + (isCorrect ? 0 : 1);
+                    const consecutiveCorrect = isCorrect ? (existing.consecutiveCorrect || 0) + 1 : 0;
+                    newData = {
+                        word: existing.word || wordId,
+                        attempts: attempts,
+                        correct: correctCount,
+                        incorrect: incorrectCount,
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+                        consecutiveCorrect: consecutiveCorrect,
+                        mastered: consecutiveCorrect >= 3
+                    };
+                } else {
+                    const wordObj = allWordsFlat.find(w => w.id === wordId);
+                    newData = {
+                        word: wordObj ? wordObj.word : wordId,
+                        attempts: 1,
+                        correct: isCorrect ? 1 : 0,
+                        incorrect: isCorrect ? 0 : 1,
+                        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+                        consecutiveCorrect: isCorrect ? 1 : 0,
+                        mastered: false
+                    };
+                }
+
+                await docRef.set(newData, { merge: true });
+                // Update local cache
+                userProgressCache[wordId] = {
+                    ...newData,
+                    lastSeen: { toMillis: () => Date.now() }
+                };
+            } catch (err) {
+                console.warn('Failed to save progress:', err);
+            }
+        }
+
         function startGame(mode) {
             currentMode = mode;
             currentCategory = document.getElementById('categoryFilter').value;
-            currentWords = getWords().slice(0, 10);
+            try {
+                currentWords = selectWordsForGame(10);
+            } catch (err) {
+                console.warn('Weighted selection failed, using random:', err);
+                currentWords = getWords().slice(0, 10);
+            }
             currentIndex = 0;
             score = 0;
 
@@ -1386,12 +1628,9 @@
         }
 
         function getRandomWords(count, excludeWord) {
-            let allWords = [];
-            Object.keys(vocabulary).forEach(cat => {
-                allWords = allWords.concat(vocabulary[cat]);
-            });
-            allWords = allWords.filter(w => w.word !== excludeWord);
-            return shuffleArray(allWords).slice(0, count);
+            const source = allWordsFlat.length > 0 ? allWordsFlat :
+                Object.keys(vocabulary).reduce((acc, cat) => acc.concat(vocabulary[cat]), []);
+            return shuffleArray(source.filter(w => w.word !== excludeWord)).slice(0, count);
         }
 
         function checkAnswer(selected, correct) {
@@ -1420,6 +1659,10 @@
                 streak = 0;
             }
 
+            // Save progress to Firestore
+            const cw = currentWords[currentIndex];
+            if (cw && cw.id) saveWordProgress(cw.id, selected === correct);
+
             updateStats();
 
             setTimeout(() => {
@@ -1436,7 +1679,8 @@
 
             input.disabled = true;
 
-            if (userAnswer === correctWord.toLowerCase()) {
+            const isRight = userAnswer === correctWord.toLowerCase();
+            if (isRight) {
                 feedback.className = 'feedback correct';
                 feedback.textContent = `✓ Correct! The answer is "${correctWord}".`;
                 score++;
@@ -1447,6 +1691,10 @@
                 feedback.textContent = `✗ Not quite. The correct answer is "${correctWord}".`;
                 streak = 0;
             }
+
+            // Save progress to Firestore
+            const cw = currentWords[currentIndex];
+            if (cw && cw.id) saveWordProgress(cw.id, isRight);
 
             updateStats();
 
@@ -1465,6 +1713,11 @@
             } else {
                 streak = 0;
             }
+
+            // Save progress to Firestore
+            const cw = currentWords[currentIndex];
+            if (cw && cw.id) saveWordProgress(cw.id, knew);
+
             updateStats();
             currentIndex++;
             nextQuestion();
