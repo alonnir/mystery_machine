@@ -469,6 +469,183 @@
         }
 
         /* ============================================
+           MY WORDS PANEL
+           ============================================ */
+        .my-words-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            margin-top: 30px;
+            padding: 16px 24px;
+            background: var(--glass-light);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--gold);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.05em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .my-words-button:hover {
+            border-color: var(--gold);
+            box-shadow: 0 8px 30px rgba(240, 194, 127, 0.15);
+            transform: translateY(-2px);
+        }
+
+        #myWordsPanel {
+            display: none;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .my-words-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .my-words-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.4em;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .my-words-back {
+            padding: 8px 20px;
+            background: var(--glass-light);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .my-words-back:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .my-words-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            font-size: 1.1em;
+        }
+
+        .word-progress-item {
+            background: var(--glass-light);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .word-progress-item:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .word-progress-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .word-progress-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .word-progress-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 1.05em;
+            color: var(--text);
+        }
+
+        .word-progress-category {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.05);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .word-progress-score {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1em;
+            padding: 4px 12px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .score-great { color: var(--green); background: rgba(126, 200, 160, 0.1); }
+        .score-ok    { color: var(--gold);  background: rgba(240, 194, 127, 0.1); }
+        .score-poor  { color: var(--rose);  background: rgba(232, 139, 139, 0.1); }
+        .score-new   { color: var(--text-muted); background: rgba(255,255,255,0.03); }
+
+        .word-progress-detail {
+            display: none;
+            padding: 0 18px 16px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .word-progress-item.expanded .word-progress-detail {
+            display: block;
+        }
+
+        .word-detail-def {
+            color: var(--text);
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-top: 12px;
+        }
+
+        .word-detail-pron {
+            color: var(--text-muted);
+            font-size: 0.85em;
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        .word-detail-stats {
+            display: flex;
+            gap: 16px;
+            margin-top: 10px;
+            font-size: 0.8em;
+            color: var(--text-muted);
+        }
+
+        .mastered-badge {
+            font-size: 0.75em;
+            color: var(--green);
+            background: rgba(126, 200, 160, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+
+        /* ============================================
            GAME AREA
            ============================================ */
         #gameArea {
@@ -1015,7 +1192,21 @@
                         <div class="mode-description">Random mix of all modes. Keep your skills sharp!</div>
                     </div>
                 </div>
+
+                <!-- My Words Button -->
+                <button class="my-words-button" onclick="showMyWords()">
+                    📊 My Words
+                </button>
             </div>
+        </div>
+
+        <!-- My Words Panel -->
+        <div id="myWordsPanel">
+            <div class="my-words-header">
+                <div class="my-words-title">My Words</div>
+                <button class="my-words-back" onclick="hideMyWords()">Back to Menu</button>
+            </div>
+            <div id="myWordsList"></div>
         </div>
 
         <!-- Game Area -->
@@ -1357,6 +1548,76 @@
                 [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
             }
             return newArray;
+        }
+
+        // ============================================
+        // MY WORDS PANEL
+        // ============================================
+        function showMyWords() {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('myWordsPanel').style.display = 'block';
+            renderMyWords();
+        }
+
+        function hideMyWords() {
+            document.getElementById('myWordsPanel').style.display = 'none';
+            document.getElementById('mainMenu').style.display = 'block';
+        }
+
+        function renderMyWords() {
+            const container = document.getElementById('myWordsList');
+
+            // Get words that have progress
+            const encountered = allWordsFlat.filter(w => userProgressCache[w.id] && userProgressCache[w.id].attempts > 0);
+
+            if (encountered.length === 0) {
+                container.innerHTML = '<div class="my-words-empty">No words encountered yet. Play a round to start tracking!</div>';
+                return;
+            }
+
+            // Sort: worst performance first (most needs practice), then alphabetical
+            encountered.sort((a, b) => {
+                const pa = userProgressCache[a.id];
+                const pb = userProgressCache[b.id];
+                const ratioA = pa.correct / pa.attempts;
+                const ratioB = pb.correct / pb.attempts;
+                if (ratioA !== ratioB) return ratioA - ratioB;
+                return a.word.localeCompare(b.word);
+            });
+
+            container.innerHTML = encountered.map(w => {
+                const p = userProgressCache[w.id];
+                const correct = p.correct || 0;
+                const attempts = p.attempts || 0;
+                const ratio = attempts > 0 ? correct / attempts : 0;
+                let scoreClass = 'score-new';
+                if (attempts > 0) {
+                    if (ratio >= 0.8) scoreClass = 'score-great';
+                    else if (ratio >= 0.5) scoreClass = 'score-ok';
+                    else scoreClass = 'score-poor';
+                }
+                const masteredHtml = p.mastered ? '<span class="mastered-badge">mastered</span>' : '';
+                const streakText = p.consecutiveCorrect > 0 ? `Streak: ${p.consecutiveCorrect}` : '';
+
+                return `
+                    <div class="word-progress-item" onclick="this.classList.toggle('expanded')">
+                        <div class="word-progress-row">
+                            <div class="word-progress-left">
+                                <span class="word-progress-name">${w.word}${masteredHtml}</span>
+                                <span class="word-progress-category">${w.category}</span>
+                            </div>
+                            <span class="word-progress-score ${scoreClass}">${correct}/${attempts}</span>
+                        </div>
+                        <div class="word-progress-detail">
+                            <div class="word-detail-def">${w.definition}</div>
+                            <div class="word-detail-pron">${w.pronunciation}</div>
+                            <div class="word-detail-stats">
+                                <span>${streakText}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function updateStats() {
