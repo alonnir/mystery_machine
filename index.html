@@ -645,6 +645,103 @@
             margin-left: 8px;
         }
 
+        .my-words-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .weight-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.85em;
+            color: var(--text-muted);
+            user-select: none;
+        }
+
+        .weight-toggle input[type="checkbox"] {
+            appearance: none;
+            width: 36px;
+            height: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .weight-toggle input[type="checkbox"]::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 14px;
+            height: 14px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .weight-toggle input[type="checkbox"]:checked {
+            background: rgba(240, 194, 127, 0.3);
+        }
+
+        .weight-toggle input[type="checkbox"]:checked::after {
+            left: 19px;
+            background: var(--gold);
+        }
+
+        .word-weight-badge {
+            display: none;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-left: 6px;
+            white-space: nowrap;
+        }
+
+        .show-weights .word-weight-badge {
+            display: inline-block;
+        }
+
+        .word-detail-weight {
+            display: none;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            font-size: 0.8em;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .show-weights .word-detail-weight {
+            display: block;
+        }
+
+        .weight-component {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+        }
+
+        .weight-component-label {
+            color: var(--text-muted);
+        }
+
+        .weight-component-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            color: var(--text);
+        }
+
         /* ============================================
            GAME AREA
            ============================================ */
@@ -1204,7 +1301,13 @@
         <div id="myWordsPanel">
             <div class="my-words-header">
                 <div class="my-words-title">My Words</div>
-                <button class="my-words-back" onclick="hideMyWords()">Back to Menu</button>
+                <div class="my-words-controls">
+                    <label class="weight-toggle">
+                        <input type="checkbox" id="showWeightsToggle" onchange="toggleWeights()">
+                        Show weights
+                    </label>
+                    <button class="my-words-back" onclick="hideMyWords()">Back to Menu</button>
+                </div>
             </div>
             <div id="myWordsList"></div>
         </div>
@@ -1564,8 +1667,23 @@
             document.getElementById('mainMenu').style.display = 'block';
         }
 
+        function toggleWeights() {
+            const list = document.getElementById('myWordsList');
+            const checked = document.getElementById('showWeightsToggle').checked;
+            if (checked) {
+                list.classList.add('show-weights');
+            } else {
+                list.classList.remove('show-weights');
+            }
+        }
+
         function renderMyWords() {
             const container = document.getElementById('myWordsList');
+
+            // Preserve toggle state
+            const showWeights = document.getElementById('showWeightsToggle').checked;
+            if (showWeights) container.classList.add('show-weights');
+            else container.classList.remove('show-weights');
 
             // Get words that have progress
             const encountered = allWordsFlat.filter(w => userProgressCache[w.id] && userProgressCache[w.id].attempts > 0);
@@ -1589,6 +1707,7 @@
                 const p = userProgressCache[w.id];
                 const correct = p.correct || 0;
                 const attempts = p.attempts || 0;
+                const incorrect = p.incorrect || 0;
                 const ratio = attempts > 0 ? correct / attempts : 0;
                 let scoreClass = 'score-new';
                 if (attempts > 0) {
@@ -1599,11 +1718,24 @@
                 const masteredHtml = p.mastered ? '<span class="mastered-badge">mastered</span>' : '';
                 const streakText = p.consecutiveCorrect > 0 ? `Streak: ${p.consecutiveCorrect}` : '';
 
+                // Calculate weight components for display
+                const baseW = ((incorrect + 1) / (attempts + 2)).toFixed(2);
+                let daysSince = 1;
+                if (p.lastSeen) {
+                    const ms = p.lastSeen.toMillis ? p.lastSeen.toMillis() :
+                        (typeof p.lastSeen === 'number' ? p.lastSeen : Date.now());
+                    daysSince = Math.max(0.1, (Date.now() - ms) / (1000 * 60 * 60 * 24));
+                }
+                const recencyW = Math.max(1.0, Math.min(3.0, Math.sqrt(daysSince))).toFixed(2);
+                const masteryW = p.mastered ? '0.30' : '1.00';
+                const finalWeight = calculateWordWeight(p).toFixed(2);
+
                 return `
                     <div class="word-progress-item" onclick="this.classList.toggle('expanded')">
                         <div class="word-progress-row">
                             <div class="word-progress-left">
                                 <span class="word-progress-name">${w.word}${masteredHtml}</span>
+                                <span class="word-weight-badge">w: ${finalWeight}</span>
                                 <span class="word-progress-category">${w.category}</span>
                             </div>
                             <span class="word-progress-score ${scoreClass}">${correct}/${attempts}</span>
@@ -1613,6 +1745,24 @@
                             <div class="word-detail-pron">${w.pronunciation}</div>
                             <div class="word-detail-stats">
                                 <span>${streakText}</span>
+                            </div>
+                            <div class="word-detail-weight">
+                                <div class="weight-component">
+                                    <span class="weight-component-label">Base (error rate)</span>
+                                    <span class="weight-component-value">${baseW}</span>
+                                </div>
+                                <div class="weight-component">
+                                    <span class="weight-component-label">Recency boost</span>
+                                    <span class="weight-component-value">&times;${recencyW}</span>
+                                </div>
+                                <div class="weight-component">
+                                    <span class="weight-component-label">Mastery penalty</span>
+                                    <span class="weight-component-value">&times;${masteryW}</span>
+                                </div>
+                                <div class="weight-component" style="border-top: 1px solid var(--glass-border); padding-top: 6px; margin-top: 4px;">
+                                    <span class="weight-component-label" style="color: var(--gold);">Final weight</span>
+                                    <span class="weight-component-value" style="color: var(--gold);">${finalWeight}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1634,7 +1784,12 @@
             if (!progress || !progress.attempts || progress.attempts === 0) {
                 return 1.5; // new word boost
             }
-            const baseWeight = progress.incorrect / Math.max(progress.attempts, 1);
+
+            // Bayesian smoothed error rate: (incorrect + 1) / (attempts + 2)
+            // Never hits 0 or 1 — starts at 0.33 and adjusts with evidence
+            // 1/1 correct → 0.25, 5/5 correct → 0.14, 0/1 correct → 0.67
+            const baseWeight = (progress.incorrect + 1) / (progress.attempts + 2);
+
             let daysSince = 1;
             if (progress.lastSeen) {
                 const ms = progress.lastSeen.toMillis ? progress.lastSeen.toMillis() :
@@ -1642,8 +1797,9 @@
                 daysSince = Math.max(0.1, (Date.now() - ms) / (1000 * 60 * 60 * 24));
             }
             const recencyBoost = Math.max(1.0, Math.min(3.0, Math.sqrt(daysSince)));
-            const masteryPenalty = progress.mastered ? 0.1 : 1.0;
-            return Math.max(0.5, baseWeight * recencyBoost * masteryPenalty);
+            const masteryPenalty = progress.mastered ? 0.3 : 1.0;
+
+            return baseWeight * recencyBoost * masteryPenalty;
         }
 
         function weightedRandomChoice(probabilities) {
