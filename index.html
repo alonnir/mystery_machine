@@ -1379,6 +1379,191 @@
             }
         }
 
+        /* ============================================
+           WORD DETAIL MODAL (tap to learn more)
+           ============================================ */
+        .word-detail-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            animation: fadeUp 0.25s ease-out;
+            padding: 20px;
+        }
+
+        .word-detail-card {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 40px 30px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            animation: fadeUp 0.3s ease-out;
+        }
+
+        .word-detail-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140px;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            border-radius: 2px;
+        }
+
+        .word-detail-close {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: var(--transition);
+            line-height: 1;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .word-detail-close:hover {
+            color: var(--gold);
+            background: var(--glass-light);
+        }
+
+        .detail-word-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--gold);
+            text-shadow: 0 0 30px rgba(240, 194, 127, 0.3);
+            margin-bottom: 4px;
+        }
+
+        .detail-category {
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.05);
+            padding: 3px 10px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+        }
+
+        .detail-section-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--coral);
+            margin-bottom: 8px;
+        }
+
+        .detail-definition {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .detail-pronunciation-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .detail-pronunciation-text {
+            font-style: italic;
+            font-size: 1.05em;
+            color: var(--text-muted);
+        }
+
+        .pronounce-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--glass-light);
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .pronounce-btn:hover {
+            background: var(--gold);
+            color: var(--bg-dark);
+            box-shadow: 0 4px 15px rgba(240, 194, 127, 0.3);
+        }
+
+        .pronounce-btn:active {
+            transform: scale(0.95);
+        }
+
+        .detail-example {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: var(--text);
+            background: var(--glass-light);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-style: italic;
+        }
+
+        .detail-example em {
+            color: var(--gold);
+            font-weight: 600;
+            font-style: normal;
+        }
+
+        .tap-hint {
+            display: block;
+            text-align: center;
+            margin-top: 14px;
+            font-size: 0.8em;
+            color: var(--text-muted);
+            opacity: 0.7;
+            animation: fadeUp 0.4s ease-out 0.5s both;
+            cursor: pointer;
+        }
+
+        .tap-hint:hover {
+            color: var(--gold);
+            opacity: 1;
+        }
+
+        @media (max-width: 600px) {
+            .word-detail-card {
+                padding: 30px 20px;
+                max-height: 85vh;
+            }
+
+            .detail-word-name {
+                font-size: 1.6em;
+            }
+        }
+
         @media (max-width: 480px) {
             .login-card {
                 padding: 30px 20px;
@@ -1939,10 +2124,24 @@
                 flipCard.removeAttribute('onclick');
                 flipCard.classList.add('flipped');
             }
+            // Add tap hint for detail modal
+            const idx = currentIndex;
+            if (!content.querySelector('.tap-hint')) {
+                const hint = document.createElement('div');
+                hint.className = 'tap-hint';
+                hint.textContent = 'Tap for more details';
+                hint.onclick = function(e) {
+                    e.stopPropagation();
+                    showWordDetail(idx);
+                };
+                const card = content.querySelector('.question-card');
+                if (card) card.appendChild(hint);
+            }
             roundAnswers[currentIndex] = {
                 answered: true,
                 correct: correct,
-                html: content.innerHTML
+                html: content.innerHTML,
+                wordIndex: currentIndex
             };
         }
 
@@ -2392,6 +2591,15 @@
             // If already answered, show review snapshot
             if (roundAnswers[currentIndex] && roundAnswers[currentIndex].answered) {
                 content.innerHTML = roundAnswers[currentIndex].html;
+                // Re-attach tap hint click handler (lost in HTML snapshot)
+                const tapHint = content.querySelector('.tap-hint');
+                if (tapHint) {
+                    const idx = currentIndex;
+                    tapHint.onclick = function(e) {
+                        e.stopPropagation();
+                        showWordDetail(idx);
+                    };
+                }
                 return;
             }
 
@@ -2614,6 +2822,110 @@
             currentIndex++;
             nextQuestion();
         }
+
+        // ============================================
+        // WORD DETAIL MODAL (tap to learn more)
+        // ============================================
+        function generateExampleSentence(word) {
+            const templates = [
+                { s: `The professor described the theory as <em>${word.word.toLowerCase()}</em>, noting its complexity.`, fits: ['abstract', 'descriptive', 'formal'] },
+                { s: `Her <em>${word.word.toLowerCase()}</em> demeanor impressed everyone at the meeting.`, fits: ['positive', 'formal', 'emotions'] },
+                { s: `Critics called the decision <em>${word.word.toLowerCase()}</em>, sparking widespread debate.`, fits: ['negative', 'abstract', 'descriptive'] },
+                { s: `He tried to <em>${word.word.toLowerCase()}</em> the situation before it escalated further.`, fits: ['actions'] },
+                { s: `There was a sense of <em>${word.word.toLowerCase()}</em> in the air as the results were announced.`, fits: ['emotions', 'abstract'] },
+                { s: `She approached the challenge with <em>${word.word.toLowerCase()}</em>, earning the respect of her peers.`, fits: ['positive', 'everyday'] },
+            ];
+            // Try to find a template that fits the category
+            const catFits = templates.filter(t => t.fits.includes(word.category));
+            if (catFits.length > 0) return catFits[Math.floor(Math.random() * catFits.length)].s;
+            // Generic fallback
+            const generic = [
+                `The word "<em>${word.word.toLowerCase()}</em>" perfectly captures this concept.`,
+                `One might describe the scene as truly <em>${word.word.toLowerCase()}</em>.`,
+                `In context, <em>${word.word.toLowerCase()}</em> conveys a nuanced meaning.`
+            ];
+            return generic[Math.floor(Math.random() * generic.length)];
+        }
+
+        function pronounceWord(word) {
+            if (!('speechSynthesis' in window)) {
+                alert('Speech synthesis is not supported in this browser.');
+                return;
+            }
+            // Cancel any ongoing speech
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.85;
+            utterance.pitch = 1.0;
+            speechSynthesis.speak(utterance);
+        }
+
+        function showWordDetail(wordIndex) {
+            const word = currentWords[wordIndex];
+            if (!word) return;
+
+            const example = generateExampleSentence(word);
+            const progress = userProgressCache[word.id];
+            let statsHtml = '';
+            if (progress && progress.attempts > 0) {
+                const pct = Math.round((progress.correct / progress.attempts) * 100);
+                statsHtml = `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Your Stats</div>
+                        <div style="color: var(--text-muted); font-size: 0.9em;">
+                            ${progress.correct}/${progress.attempts} correct (${pct}%)${progress.mastered ? ' · <span style="color: var(--green);">Mastered</span>' : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            const overlay = document.createElement('div');
+            overlay.className = 'word-detail-overlay';
+            overlay.onclick = function(e) {
+                if (e.target === overlay) hideWordDetail();
+            };
+            overlay.innerHTML = `
+                <div class="word-detail-card">
+                    <button class="word-detail-close" onclick="hideWordDetail()">&times;</button>
+                    <div class="detail-word-name">${word.word}</div>
+                    <div class="detail-category">${word.category}</div>
+
+                    <div class="detail-section">
+                        <div class="detail-section-label">Definition</div>
+                        <div class="detail-definition">${word.definition}</div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-section-label">Pronunciation</div>
+                        <div class="detail-pronunciation-row">
+                            <span class="detail-pronunciation-text">${word.pronunciation}</span>
+                            <button class="pronounce-btn" onclick="pronounceWord('${word.word}')">
+                                🔊 Listen
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-section-label">Example</div>
+                        <div class="detail-example">${example}</div>
+                    </div>
+
+                    ${statsHtml}
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function hideWordDetail() {
+            const overlay = document.querySelector('.word-detail-overlay');
+            if (overlay) overlay.remove();
+        }
+
+        // Close detail modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') hideWordDetail();
+        });
 
         function showResults() {
             if (autoAdvanceTimeout) { clearTimeout(autoAdvanceTimeout); autoAdvanceTimeout = null; }
