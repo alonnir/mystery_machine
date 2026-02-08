@@ -1000,6 +1000,35 @@
             position: relative;
         }
 
+        .quit-game-btn {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: var(--glass-light);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            padding: 5px 14px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            z-index: 5;
+        }
+
+        @media (hover: hover) {
+            .quit-game-btn:hover {
+                border-color: var(--rose);
+                color: var(--rose);
+                background: rgba(232, 139, 139, 0.1);
+            }
+        }
+
+        #gameArea.showing-results .quit-game-btn {
+            display: none;
+        }
+
         .progress-bar {
             width: 100%;
             height: 6px;
@@ -1766,7 +1795,7 @@
                     <div class="game-mode-card" onclick="startGame('fillblank')">
                         <div class="mode-icon">✏️</div>
                         <div class="mode-title">Fill the Blank</div>
-                        <div class="mode-description">Type the word that completes the sentence correctly.</div>
+                        <div class="mode-description">Pick the word that completes the sentence correctly.</div>
                     </div>
 
                     <div class="game-mode-card" onclick="startGame('definition')">
@@ -1808,6 +1837,7 @@
         <!-- Game Area -->
         <div id="gameArea">
             <div class="progress-container">
+                <button class="quit-game-btn" onclick="backToMenu()">✕ Quit</button>
                 <div class="progress-bar">
                     <div id="progressFill"></div>
                 </div>
@@ -2760,13 +2790,19 @@
             const sentence = exampleSentences[Math.floor(Math.random() * exampleSentences.length)];
             const blankedSentence = sentence.replace(word.word.toLowerCase(), '_____');
 
+            const wrongAnswers = getRandomWords(3, word.word);
+            const allOptions = shuffleArray([...wrongAnswers, word]);
+
             content.innerHTML = `
                 <div class="question-card">
-                    <div class="question">Fill in the blank with the correct word:</div>
-                    <p style="font-size: 1.2em; margin: 20px 0; font-style: italic; color: var(--text);">"${blankedSentence}"</p>
-                    <p style="margin: 10px 0; color: var(--text-muted);">Hint: ${word.definition}</p>
-                    <input type="text" class="input-answer" id="answerInput" placeholder="Type your answer...">
-                    <button class="submit-button" onclick="checkFillBlank('${word.word}')">Submit Answer</button>
+                    <div class="question">Fill in the blank:</div>
+                    <p style="font-size: 1.1em; margin: 20px 0; font-style: italic; color: var(--text); line-height: 1.6;">"${blankedSentence}"</p>
+                    <p style="margin: 10px 0 20px; color: var(--text-muted); font-size: 0.9em;">Hint: ${word.definition}</p>
+                    <div class="options">
+                        ${allOptions.map((opt, idx) => `
+                            <button class="option-button" onclick="checkAnswer(${idx}, ${allOptions.indexOf(word)})">${opt.word}</button>
+                        `).join('')}
+                    </div>
                     <div class="feedback" id="feedback"></div>
                 </div>
             `;
