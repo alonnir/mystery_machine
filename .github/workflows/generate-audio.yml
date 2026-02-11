@@ -2,6 +2,11 @@ name: Generate Pronunciation Audio
 
 on:
   workflow_dispatch:
+    inputs:
+      api_key:
+        description: 'ElevenLabs API Key'
+        required: true
+        type: string
 
 jobs:
   generate-audio:
@@ -22,8 +27,10 @@ jobs:
 
       - name: Generate audio files
         env:
-          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-        run: python generate_audio_ci.py
+          ELEVENLABS_API_KEY: ${{ inputs.api_key }}
+        run: |
+          echo "::add-mask::$ELEVENLABS_API_KEY"
+          python generate_audio_ci.py
 
       - name: Commit audio files
         run: |
