@@ -3503,16 +3503,49 @@
             return generic[Math.floor(Math.random() * generic.length)];
         }
 
+        // Voice selection: prefer natural-sounding British voices
+        let preferredVoice = null;
+        function loadPreferredVoice() {
+            const voices = speechSynthesis.getVoices();
+            if (!voices.length) return;
+            // Priority: best-sounding British voices first
+            const priorities = [
+                v => v.name === 'Daniel' && v.lang.startsWith('en'),
+                v => v.name === 'Oliver' && v.lang.startsWith('en'),
+                v => v.name.includes('Daniel (Enhanced)'),
+                v => v.name.includes('Oliver (Enhanced)'),
+                v => v.name === 'Google UK English Male',
+                v => v.name === 'Google UK English Female',
+                v => v.name.includes('Ryan') && v.lang === 'en-GB',
+                v => v.name.includes('Sonia') && v.lang === 'en-GB',
+                v => v.name.includes('Libby') && v.lang === 'en-GB',
+                v => v.lang === 'en-GB',
+                v => v.lang.startsWith('en-GB'),
+                v => v.lang.startsWith('en') && !v.localService,
+                v => v.lang.startsWith('en'),
+            ];
+            for (const test of priorities) {
+                const match = voices.find(test);
+                if (match) { preferredVoice = match; return; }
+            }
+        }
+        if (speechSynthesis.getVoices().length) loadPreferredVoice();
+        speechSynthesis.onvoiceschanged = loadPreferredVoice;
+
         function pronounceWord(word) {
             if (!('speechSynthesis' in window)) {
                 alert('Speech synthesis is not supported in this browser.');
                 return;
             }
-            // Cancel any ongoing speech
             speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(word);
-            utterance.lang = 'en-US';
-            utterance.rate = 0.85;
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+                utterance.lang = preferredVoice.lang;
+            } else {
+                utterance.lang = 'en-GB';
+            }
+            utterance.rate = 0.88;
             utterance.pitch = 1.0;
             speechSynthesis.speak(utterance);
         }
