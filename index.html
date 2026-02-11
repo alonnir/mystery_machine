@@ -452,8 +452,19 @@
         }
 
         .mode-icon {
-            font-size: 2.5em;
-            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: var(--glass-light);
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            letter-spacing: 1px;
         }
 
         .mode-title {
@@ -1788,31 +1799,43 @@
                 <h2 class="game-modes-title">Choose a Mode</h2>
                 <div class="game-modes-grid">
                     <div class="game-mode-card" onclick="startGame('flashcard')">
-                        <div class="mode-icon">🎴</div>
+                        <div class="mode-icon">FC</div>
                         <div class="mode-title">Flashcard</div>
                         <div class="mode-description">Learn with interactive flip cards. Test your knowledge of word meanings.</div>
                     </div>
 
                     <div class="game-mode-card" onclick="startGame('multiple')">
-                        <div class="mode-icon">🎯</div>
+                        <div class="mode-icon">MC</div>
                         <div class="mode-title">Multiple Choice</div>
                         <div class="mode-description">Pick the correct definition from four options. Classic challenge.</div>
                     </div>
 
                     <div class="game-mode-card" onclick="startGame('fillblank')">
-                        <div class="mode-icon">✏️</div>
+                        <div class="mode-icon">FB</div>
                         <div class="mode-title">Fill the Blank</div>
                         <div class="mode-description">Pick the word that completes the sentence correctly.</div>
                     </div>
 
                     <div class="game-mode-card" onclick="startGame('definition')">
-                        <div class="mode-icon">📖</div>
+                        <div class="mode-icon">DM</div>
                         <div class="mode-title">Definition Match</div>
                         <div class="mode-description">Match words to their definitions. Test your recall abilities.</div>
                     </div>
 
+                    <div class="game-mode-card" onclick="startGame('synonym')">
+                        <div class="mode-icon">SY</div>
+                        <div class="mode-title">Synonyms</div>
+                        <div class="mode-description">Find the word that means the same. Build your synonym vocabulary.</div>
+                    </div>
+
+                    <div class="game-mode-card" onclick="startGame('opposite')">
+                        <div class="mode-icon">OP</div>
+                        <div class="mode-title">Opposites</div>
+                        <div class="mode-description">Find the word that means the opposite. Test your antonym knowledge.</div>
+                    </div>
+
                     <div class="game-mode-card" onclick="startGame('mixed')">
-                        <div class="mode-icon">🎲</div>
+                        <div class="mode-icon">MX</div>
                         <div class="mode-title">Mixed Challenge</div>
                         <div class="mode-description">Random mix of all modes. Keep your skills sharp!</div>
                     </div>
@@ -1820,7 +1843,7 @@
 
                 <!-- My Words Button -->
                 <button class="my-words-button" onclick="showMyWords()">
-                    📊 My Words
+                    My Words
                 </button>
             </div>
         </div>
@@ -2687,6 +2710,10 @@
             ]
         };
 
+        const wordSynonyms = {"Amicable":"Friendly","Benevolent":"Kind","Coherent":"Clear","Commensurate":"Proportional","Commendable":"Praiseworthy","Congenial":"Pleasant","Conscientious":"Careful","Convivial":"Sociable","Courageous":"Brave","Diligent":"Hardworking","Eloquent":"Articulate","Empathetic":"Compassionate","Erudite":"Scholarly","Ethical":"Moral","Exemplary":"Outstanding","Fastidious":"Meticulous","Fortuitous":"Lucky","Generous":"Giving","Gregarious":"Sociable","Humble":"Modest","Impartial":"Fair","Indefatigable":"Tireless","Inimitable":"Unique","Innovative":"Creative","Judicious":"Wise","Magnanimous":"Generous","Meticulous":"Precise","Munificent":"Generous","Objective":"Unbiased","Optimistic":"Hopeful","Perspicacious":"Insightful","Philanthropic":"Charitable","Pragmatic":"Practical","Prudent":"Cautious","Sagacious":"Wise","Scrupulous":"Honest","Stalwart":"Loyal","Steadfast":"Loyal","Tenacious":"Persistent","Trustworthy":"Reliable","Venerable":"Respected","Veracious":"Truthful","Virtuous":"Righteous","Aberrant":"Abnormal","Abrasive":"Harsh","Aloof":"Distant","Apathetic":"Indifferent","Arrogant":"Proud","Avaricious":"Greedy","Bellicose":"Hostile","Belligerent":"Aggressive","Cantankerous":"Grumpy","Capricious":"Unpredictable","Conceited":"Arrogant","Conniving":"Scheming","Curmudgeonly":"Grumpy","Dastardly":"Cowardly","Deceitful":"Dishonest","Derisive":"Mocking","Dogmatic":"Rigid","Duplicitous":"Dishonest","Egocentric":"Selfish","Fallacious":"False","Glib":"Superficial","Haughty":"Arrogant","Hubristic":"Arrogant","Hypocritical":"Insincere","Imperious":"Domineering","Impetuous":"Rash","Indolent":"Lazy","Insolent":"Disrespectful","Malevolent":"Evil","Mendacious":"Dishonest","Miserly":"Stingy","Narcissistic":"Selfish","Nefarious":"Wicked","Obsequious":"Subservient","Obstinate":"Stubborn","Obtrusive":"Intrusive","Ostentatious":"Showy","Parsimonious":"Stingy","Pedantic":"Nitpicky","Petulant":"Whiny","Pompous":"Arrogant","Pretentious":"Affected","Pugnacious":"Aggressive","Quarrelsome":"Argumentative","Querulous":"Complaining","Rapacious":"Greedy","Recalcitrant":"Defiant","Sanctimonious":"Self-righteous","Sardonic":"Mocking","Slovenly":"Messy","Surreptitious":"Sneaky","Truculent":"Aggressive","Uncouth":"Rude","Unscrupulous":"Dishonest","Vacuous":"Empty","Vindictive":"Vengeful","Adamant":"Firm","Alluring":"Attractive","Ardent":"Passionate","Baleful":"Sinister","Cacophony":"Discord","Chaotic":"Disorderly","Clandestine":"Secret","Cogent":"Compelling","Congruent":"Matching","Convoluted":"Complex","Cornucopia":"Abundance","Cryptic":"Mysterious","Decorous":"Proper","Discombobulated":"Confused","Ebullient":"Enthusiastic","Effervescent":"Bubbly","Enigmatic":"Mysterious","Ephemeral":"Temporary","Ethereal":"Delicate","Euphoric":"Joyful","Florid":"Ornate","Furtive":"Sneaky","Garrulous":"Talkative","Haphazard":"Random","Immaculate":"Clean","Impervious":"Resistant","Incongruous":"Inconsistent","Inscrutable":"Mysterious","Jocular":"Humorous","Laconic":"Brief","Loquacious":"Talkative","Luminous":"Bright","Mercurial":"Unpredictable","Nebulous":"Vague","Opulent":"Luxurious","Palpable":"Tangible","Penurious":"Poor","Placid":"Calm","Precarious":"Unstable","Pristine":"Unspoiled","Quaint":"Charming","Resplendent":"Brilliant","Scintillating":"Sparkling","Serendipitous":"Fortunate","Somnolent":"Sleepy","Stoic":"Calm","Succinct":"Concise","Superfluous":"Excessive","Tawdry":"Tacky","Tempestuous":"Turbulent","Torpid":"Sluggish","Ubiquitous":"Everywhere","Undulating":"Wavy","Vivacious":"Lively","Volatile":"Unstable","Altruism":"Selflessness","Ambiguity":"Uncertainty","Autonomy":"Independence","Camaraderie":"Friendship","Elation":"Joy","Empathy":"Understanding","Ennui":"Boredom","Epiphany":"Revelation","Equanimity":"Calmness","Fallacy":"Error","Fortitude":"Courage","Hegemony":"Dominance","Hubris":"Pride","Idiosyncrasy":"Quirk","Infamy":"Notoriety","Insouciance":"Indifference","Introspection":"Reflection","Levity":"Lightness","Malaise":"Unease","Nuance":"Subtlety","Optimism":"Hopefulness","Paradox":"Contradiction","Perseverance":"Persistence","Pessimism":"Hopelessness","Piety":"Devotion","Pragmatism":"Practicality","Resilience":"Toughness","Reverence":"Respect","Serendipity":"Chance","Synergy":"Cooperation","Temerity":"Audacity","Tranquility":"Peacefulness","Veracity":"Truthfulness","Abdicate":"Renounce","Acquiesce":"Agree","Admonish":"Scold","Advocate":"Support","Belittle":"Diminish","Capitulate":"Surrender","Coalesce":"Combine","Coerce":"Force","Cogitate":"Think","Condone":"Forgive","Conflate":"Merge","Corroborate":"Confirm","Decry":"Criticize","Delineate":"Describe","Disseminate":"Spread","Elucidate":"Explain","Emulate":"Imitate","Encroach":"Intrude","Enervate":"Weaken","Espouse":"Adopt","Exacerbate":"Worsen","Exonerate":"Absolve","Facilitate":"Enable","Galvanize":"Stimulate","Instigate":"Provoke","Lambaste":"Criticize","Obfuscate":"Obscure","Perpetuate":"Continue","Peruse":"Read","Placate":"Appease","Refute":"Disprove","Reiterate":"Repeat","Renounce":"Reject","Undermine":"Weaken","Usurp":"Seize","Validate":"Confirm","Wane":"Decline","Acumen":"Insight","Affinity":"Liking","Alacrity":"Eagerness","Candid":"Frank","Chuffed":"Pleased","Dearth":"Scarcity","Decorum":"Propriety","Dissonance":"Discord","Efficacy":"Effectiveness","Elusive":"Evasive","Epitome":"Embodiment","Fetching":"Attractive","Finesse":"Elegance","Fluctuate":"Vary","Heinous":"Atrocious","Inept":"Clumsy","Inexorable":"Inevitable","Labyrinth":"Maze","Poppycock":"Nonsense","Resilient":"Flexible","Solace":"Comfort","Tenuous":"Weak","Waffle":"Ramble","Whinge":"Complain","Adjudicate":"Judge","Ambiguous":"Unclear","Ameliorate":"Improve","Approbation":"Approval","Assiduous":"Diligent","Auspicious":"Favorable","Autonomous":"Independent","Circumspect":"Cautious","Contrite":"Remorseful","Corpulent":"Obese","Deference":"Respect","Derision":"Mockery","Discern":"Perceive","Disparate":"Different","Efficacious":"Effective","Expedient":"Practical","Incontrovertible":"Indisputable","Insidious":"Treacherous","Mitigate":"Ease","Perfunctory":"Superficial","Pernicious":"Harmful","Promulgate":"Announce","Prosaic":"Dull","Reticent":"Reserved","Salient":"Prominent","Stipulate":"Specify","Substantiate":"Prove","Sycophant":"Flatterer","Unprecedented":"Novel","Verbatim":"Exactly","Zealous":"Enthusiastic","Allegory":"Parable","Allusion":"Reference","Analogy":"Comparison","Antithesis":"Opposite","Aphorism":"Saying","Archetype":"Prototype","Euphemism":"Substitute","Evocative":"Suggestive","Hyperbole":"Exaggeration","Idiom":"Expression","Irony":"Sarcasm","Metaphor":"Comparison","Oxymoron":"Contradiction","Pejorative":"Disparaging","Simile":"Comparison","Trite":"Hackneyed","Vernacular":"Dialect","Anomaly":"Abnormality","Catalyst":"Agent","Empirical":"Observable","Entropy":"Disorder","Hypothesis":"Theory","Metamorphosis":"Transformation","Taxonomy":"Classification","Ambivalence":"Uncertainty","Anguish":"Suffering","Apathy":"Indifference","Apprehension":"Dread","Awe":"Wonder","Contentment":"Satisfaction","Contrition":"Remorse","Despondency":"Hopelessness","Euphoria":"Elation","Exasperation":"Frustration","Foreboding":"Dread","Gratification":"Pleasure","Melancholy":"Sadness","Misgiving":"Doubt","Nostalgia":"Longing","Resentment":"Bitterness","Serenity":"Tranquility","Trepidation":"Fear","Zeal":"Enthusiasm","Pedagogy":"Teaching","Plagiarism":"Copying","Befuddled":"Confused","Beleaguered":"Besieged","Boisterous":"Loud","Conundrum":"Puzzle","Enigma":"Mystery","Felicity":"Happiness","Harbinger":"Herald","Ineffable":"Indescribable","Insatiable":"Greedy","Lethargy":"Sluggishness","Peculiar":"Strange","Quiescent":"Inactive","Quixotic":"Idealistic","Quintessential":"Typical","Unfathomable":"Incomprehensible","Utopia":"Paradise","Zenith":"Peak"};
+
+        const wordAntonyms = {"Amicable":"Hostile","Benevolent":"Malevolent","Coherent":"Incoherent","Commensurate":"Disproportionate","Commendable":"Contemptible","Conscientious":"Negligent","Convivial":"Unsociable","Courageous":"Cowardly","Diligent":"Lazy","Eloquent":"Inarticulate","Empathetic":"Callous","Erudite":"Ignorant","Ethical":"Unethical","Exemplary":"Deplorable","Fastidious":"Slovenly","Fortuitous":"Unfortunate","Generous":"Stingy","Gregarious":"Solitary","Humble":"Arrogant","Impartial":"Biased","Innovative":"Conventional","Judicious":"Reckless","Magnanimous":"Petty","Meticulous":"Careless","Munificent":"Stingy","Objective":"Subjective","Optimistic":"Pessimistic","Perspicacious":"Obtuse","Philanthropic":"Selfish","Pragmatic":"Idealistic","Prudent":"Reckless","Sagacious":"Foolish","Scrupulous":"Unscrupulous","Steadfast":"Fickle","Tenacious":"Weak","Trustworthy":"Untrustworthy","Veracious":"Dishonest","Virtuous":"Vicious","Aberrant":"Normal","Abrasive":"Gentle","Aloof":"Friendly","Apathetic":"Passionate","Arrogant":"Humble","Avaricious":"Generous","Bellicose":"Peaceful","Belligerent":"Peaceful","Cantankerous":"Pleasant","Capricious":"Consistent","Conceited":"Humble","Conniving":"Honest","Dastardly":"Honorable","Deceitful":"Honest","Derisive":"Respectful","Dogmatic":"Flexible","Duplicitous":"Honest","Egocentric":"Altruistic","Fallacious":"Valid","Glib":"Thoughtful","Haughty":"Humble","Hypocritical":"Sincere","Imperious":"Humble","Impetuous":"Cautious","Indolent":"Diligent","Insolent":"Respectful","Malevolent":"Benevolent","Mendacious":"Truthful","Miserly":"Generous","Narcissistic":"Selfless","Nefarious":"Virtuous","Obsequious":"Assertive","Obstinate":"Flexible","Ostentatious":"Modest","Parsimonious":"Generous","Petulant":"Patient","Pompous":"Modest","Pretentious":"Modest","Pugnacious":"Peaceful","Quarrelsome":"Agreeable","Querulous":"Content","Rapacious":"Generous","Recalcitrant":"Obedient","Sanctimonious":"Sincere","Sardonic":"Sincere","Slovenly":"Neat","Surreptitious":"Open","Truculent":"Peaceful","Uncouth":"Refined","Unscrupulous":"Principled","Vacuous":"Thoughtful","Vindictive":"Forgiving","Adamant":"Flexible","Alluring":"Repellent","Ardent":"Apathetic","Baleful":"Benign","Cacophony":"Harmony","Chaotic":"Orderly","Clandestine":"Open","Cogent":"Weak","Convoluted":"Simple","Cornucopia":"Scarcity","Cryptic":"Clear","Decorous":"Improper","Ebullient":"Subdued","Effervescent":"Dull","Enigmatic":"Clear","Ephemeral":"Permanent","Ethereal":"Earthly","Euphoric":"Miserable","Florid":"Pale","Furtive":"Open","Garrulous":"Taciturn","Haphazard":"Systematic","Immaculate":"Filthy","Impervious":"Permeable","Inscrutable":"Obvious","Jocular":"Serious","Laconic":"Verbose","Loquacious":"Taciturn","Luminous":"Dark","Mercurial":"Stable","Myriad":"Few","Nebulous":"Clear","Opulent":"Sparse","Palpable":"Imperceptible","Penurious":"Abundant","Placid":"Turbulent","Precarious":"Stable","Pristine":"Dirty","Quaint":"Modern","Resplendent":"Dull","Scintillating":"Dull","Serendipitous":"Unfortunate","Somnolent":"Alert","Stoic":"Emotional","Succinct":"Verbose","Superfluous":"Essential","Tawdry":"Elegant","Tempestuous":"Calm","Torpid":"Energetic","Ubiquitous":"Rare","Undulating":"Flat","Vivacious":"Dull","Volatile":"Stable","Altruism":"Selfishness","Ambiguity":"Clarity","Autonomy":"Dependence","Camaraderie":"Hostility","Complacency":"Vigilance","Elation":"Despair","Empathy":"Indifference","Ennui":"Enthusiasm","Equanimity":"Anxiety","Fallacy":"Truth","Fortitude":"Weakness","Hegemony":"Equality","Hubris":"Humility","Infamy":"Honor","Insouciance":"Concern","Levity":"Seriousness","Malaise":"Wellness","Nuance":"Simplicity","Optimism":"Pessimism","Perseverance":"Quitting","Pessimism":"Optimism","Piety":"Irreverence","Pragmatism":"Idealism","Resilience":"Fragility","Reverence":"Disrespect","Synergy":"Discord","Temerity":"Caution","Tranquility":"Turmoil","Veracity":"Falsehood","Abdicate":"Assume","Acquiesce":"Resist","Admonish":"Praise","Advocate":"Oppose","Belittle":"Praise","Capitulate":"Resist","Coalesce":"Separate","Coerce":"Persuade","Condone":"Condemn","Conflate":"Distinguish","Corroborate":"Contradict","Decry":"Praise","Delineate":"Obscure","Disseminate":"Suppress","Elucidate":"Confuse","Encroach":"Retreat","Enervate":"Energize","Espouse":"Reject","Exacerbate":"Improve","Exonerate":"Convict","Facilitate":"Hinder","Galvanize":"Sedate","Instigate":"Calm","Lambaste":"Praise","Obfuscate":"Clarify","Perpetuate":"End","Placate":"Anger","Refute":"Confirm","Renounce":"Accept","Undermine":"Support","Usurp":"Yield","Validate":"Invalidate","Wane":"Wax","Acumen":"Dullness","Affinity":"Aversion","Alacrity":"Sluggishness","Austerity":"Luxury","Brevity":"Length","Candid":"Evasive","Chuffed":"Displeased","Dearth":"Abundance","Decorum":"Impropriety","Dissonance":"Harmony","Efficacy":"Ineffectiveness","Elusive":"Obvious","Fetching":"Repulsive","Finesse":"Clumsiness","Fluctuate":"Stabilize","Heinous":"Virtuous","Inept":"Skillful","Inexorable":"Avoidable","Resilient":"Fragile","Solace":"Misery","Tenuous":"Strong","Adjudicate":"Ignore","Ambiguous":"Clear","Ameliorate":"Worsen","Approbation":"Disapproval","Assiduous":"Lazy","Auspicious":"Inauspicious","Autonomous":"Dependent","Bellwether":"Follower","Circumspect":"Reckless","Contrite":"Unrepentant","Corpulent":"Thin","Deference":"Disrespect","Derision":"Respect","Discern":"Overlook","Disparate":"Similar","Efficacious":"Ineffective","Expedient":"Impractical","Incontrovertible":"Debatable","Insidious":"Obvious","Mitigate":"Aggravate","Opprobrium":"Praise","Perfunctory":"Thorough","Pernicious":"Benign","Promulgate":"Suppress","Propriety":"Impropriety","Prosaic":"Imaginative","Reticent":"Talkative","Retrenchment":"Expansion","Salient":"Obscure","Substantiate":"Disprove","Sycophant":"Critic","Unprecedented":"Common","Verbatim":"Paraphrased","Zealous":"Apathetic","Ambivalence":"Certainty","Anguish":"Joy","Apathy":"Enthusiasm","Apprehension":"Confidence","Awe":"Contempt","Contentment":"Discontent","Despondency":"Hopefulness","Euphoria":"Depression","Exasperation":"Patience","Foreboding":"Hope","Gratification":"Disappointment","Melancholy":"Cheerfulness","Misgiving":"Confidence","Resentment":"Goodwill","Serenity":"Anxiety","Solace":"Torment","Trepidation":"Confidence","Zeal":"Apathy","Befuddled":"Clear","Beleaguered":"Supported","Boisterous":"Quiet","Felicity":"Misfortune","Insatiable":"Satisfied","Lethargy":"Vitality","Peculiar":"Common","Quiescent":"Active","Quintessential":"Atypical","Unfathomable":"Understandable","Utopia":"Dystopia","Zenith":"Nadir"};
+
         // Game state
         let currentMode = '';
         let currentCategory = 'all';
@@ -3193,10 +3220,20 @@
             currentMode = mode;
             currentCategory = document.getElementById('categoryFilter').value;
             try {
-                currentWords = selectWordsForGame(10);
+                let pool = selectWordsForGame(50);
+                if (mode === 'synonym') {
+                    pool = pool.filter(w => wordSynonyms[w.word]);
+                } else if (mode === 'opposite') {
+                    pool = pool.filter(w => wordAntonyms[w.word]);
+                }
+                currentWords = pool.slice(0, 10);
+                if (currentWords.length === 0) throw new Error('No words available for this mode');
             } catch (err) {
                 console.warn('Weighted selection failed, using random:', err);
-                currentWords = getWords().slice(0, 10);
+                let fallback = getWords();
+                if (mode === 'synonym') fallback = fallback.filter(w => wordSynonyms[w.word]);
+                else if (mode === 'opposite') fallback = fallback.filter(w => wordAntonyms[w.word]);
+                currentWords = fallback.slice(0, 10);
             }
             currentIndex = 0;
             score = 0;
@@ -3268,11 +3305,21 @@
                 case 'definition':
                     renderDefinitionMatch(content, currentWord);
                     break;
+                case 'synonym':
+                    renderSynonym(content, currentWord);
+                    break;
+                case 'opposite':
+                    renderOpposite(content, currentWord);
+                    break;
                 case 'mixed':
                     const modes = ['multiple', 'fillblank', 'definition'];
+                    if (wordSynonyms[currentWord.word]) modes.push('synonym');
+                    if (wordAntonyms[currentWord.word]) modes.push('opposite');
                     const randomMode = modes[Math.floor(Math.random() * modes.length)];
                     if (randomMode === 'multiple') renderMultipleChoice(content, currentWord);
                     else if (randomMode === 'fillblank') renderFillBlank(content, currentWord);
+                    else if (randomMode === 'synonym') renderSynonym(content, currentWord);
+                    else if (randomMode === 'opposite') renderOpposite(content, currentWord);
                     else renderDefinitionMatch(content, currentWord);
                     break;
             }
@@ -3296,8 +3343,8 @@
                         </div>
                     </div>
                     <div style="text-align: center; margin-top: 30px;">
-                        <button class="next-button" onclick="moveToNext(true)">I know this ✓</button>
-                        <button class="submit-button" onclick="moveToNext(false)" style="background: var(--rose); margin-left: 10px;">Need to review ✗</button>
+                        <button class="next-button" onclick="moveToNext(true)">I know this</button>
+                        <button class="submit-button" onclick="moveToNext(false)" style="background: var(--rose); margin-left: 10px;">Need to review</button>
                     </div>
                 </div>
             `;
@@ -3368,6 +3415,58 @@
             `;
         }
 
+        function getRandomSynonymOptions(correctWord, count) {
+            const allSynValues = Object.values(wordSynonyms).filter(s => s !== wordSynonyms[correctWord]);
+            return shuffleArray(allSynValues).slice(0, count);
+        }
+
+        function getRandomAntonymOptions(correctWord, count) {
+            const allAntValues = Object.values(wordAntonyms).filter(a => a !== wordAntonyms[correctWord]);
+            return shuffleArray(allAntValues).slice(0, count);
+        }
+
+        function renderSynonym(content, word) {
+            const correctSynonym = wordSynonyms[word.word];
+            const wrongOptions = getRandomSynonymOptions(word.word, 3);
+            const allOptions = shuffleArray([correctSynonym, ...wrongOptions]);
+            const correctIdx = allOptions.indexOf(correctSynonym);
+
+            content.innerHTML = `
+                <div class="question-card">
+                    <div class="question">Which word is a synonym of:</div>
+                    <div class="word-display">${word.word}</div>
+                    <p class="pronunciation">${word.pronunciation}</p>
+                    <div class="options">
+                        ${allOptions.map((opt, idx) => `
+                            <button class="option-button" onclick="checkAnswer(${idx}, ${correctIdx})">${opt}</button>
+                        `).join('')}
+                    </div>
+                    <div class="feedback" id="feedback"></div>
+                </div>
+            `;
+        }
+
+        function renderOpposite(content, word) {
+            const correctAntonym = wordAntonyms[word.word];
+            const wrongOptions = getRandomAntonymOptions(word.word, 3);
+            const allOptions = shuffleArray([correctAntonym, ...wrongOptions]);
+            const correctIdx = allOptions.indexOf(correctAntonym);
+
+            content.innerHTML = `
+                <div class="question-card">
+                    <div class="question">Which word is the opposite of:</div>
+                    <div class="word-display">${word.word}</div>
+                    <p class="pronunciation">${word.pronunciation}</p>
+                    <div class="options">
+                        ${allOptions.map((opt, idx) => `
+                            <button class="option-button" onclick="checkAnswer(${idx}, ${correctIdx})">${opt}</button>
+                        `).join('')}
+                    </div>
+                    <div class="feedback" id="feedback"></div>
+                </div>
+            `;
+        }
+
         function getRandomWords(count, excludeWord) {
             const source = allWordsFlat.length > 0 ? allWordsFlat :
                 Object.keys(vocabulary).reduce((acc, cat) => acc.concat(vocabulary[cat]), []);
@@ -3390,14 +3489,14 @@
             if (isCorrect) {
                 buttons[selected].classList.add('correct');
                 feedback.className = 'feedback correct';
-                feedback.textContent = '✓ Correct! Well done!';
+                feedback.textContent = 'Correct! Well done!';
                 score++;
                 correctAnswers++;
                 streak++;
             } else {
                 buttons[selected].classList.add('incorrect');
                 feedback.className = 'feedback incorrect';
-                feedback.textContent = '✗ Not quite right. The correct answer is highlighted.';
+                feedback.textContent = 'Not quite right. The correct answer is highlighted.';
                 streak = 0;
             }
 
@@ -3429,13 +3528,13 @@
             const isRight = userAnswer === correctWord.toLowerCase();
             if (isRight) {
                 feedback.className = 'feedback correct';
-                feedback.textContent = `✓ Correct! The answer is "${correctWord}".`;
+                feedback.textContent = `Correct! The answer is "${correctWord}".`;
                 score++;
                 correctAnswers++;
                 streak++;
             } else {
                 feedback.className = 'feedback incorrect';
-                feedback.textContent = `✗ Not quite. The correct answer is "${correctWord}".`;
+                feedback.textContent = `Not quite. The correct answer is "${correctWord}".`;
                 streak = 0;
             }
 
@@ -3595,7 +3694,7 @@
                         <div class="detail-pronunciation-row">
                             <span class="detail-pronunciation-text">${word.pronunciation}</span>
                             <button class="pronounce-btn" onclick="pronounceWord('${word.word}')">
-                                🔊 Listen
+                                Listen
                             </button>
                         </div>
                     </div>
@@ -3628,10 +3727,10 @@
             const percentage = Math.round((score / currentWords.length) * 100);
 
             let message = '';
-            if (percentage >= 90) message = '🌟 Outstanding! You\'re a vocabulary master!';
-            else if (percentage >= 70) message = '🎉 Great job! Keep up the good work!';
-            else if (percentage >= 50) message = '👍 Good effort! Practice makes perfect!';
-            else message = '📚 Keep practicing! You\'re learning!';
+            if (percentage >= 90) message = 'Outstanding! You\'re a vocabulary master!';
+            else if (percentage >= 70) message = 'Great job! Keep up the good work!';
+            else if (percentage >= 50) message = 'Good effort! Practice makes perfect!';
+            else message = 'Keep practicing! You\'re learning!';
 
             content.innerHTML = `
                 <div class="result-summary">
