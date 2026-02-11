@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"""Generate pronunciation audio for all vocabulary words using ElevenLabs TTS API.
-Designed to run in GitHub Actions CI environment."""
+"""Generate pronunciation audio for all vocabulary words using Microsoft Edge TTS.
+Designed to run in GitHub Actions CI environment. Free, no API key needed."""
 
+import asyncio
 import os
-import time
-import requests
+import edge_tts
 
-API_KEY = os.environ.get("ELEVENLABS_API_KEY")
-VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"  # George - warm British male
-MODEL_ID = "eleven_multilingual_v2"
+VOICE = "en-GB-RyanNeural"  # British male - warm and clear
 OUTPUT_DIR = "audio"
 
 WORDS = [
@@ -139,7 +137,7 @@ WORDS = [
 def word_to_id(word):
     return word.lower().replace(" ", "_").replace("-", "_")
 
-def generate_audio(word):
+async def generate_audio(word):
     word_id = word_to_id(word)
     filepath = os.path.join(OUTPUT_DIR, f"{word_id}.mp3")
 
@@ -147,41 +145,17 @@ def generate_audio(word):
         print(f"  Skipping {word} (already exists)")
         return True
 
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
-    headers = {
-        "xi-api-key": API_KEY,
-        "Content-Type": "application/json",
-        "Accept": "audio/mpeg",
-    }
-    data = {
-        "text": word,
-        "model_id": MODEL_ID,
-        "voice_settings": {
-            "stability": 0.75,
-            "similarity_boost": 0.85,
-            "style": 0.4,
-        },
-    }
-
     try:
-        resp = requests.post(url, json=data, headers=headers, timeout=30)
-        if resp.status_code == 200:
-            with open(filepath, "wb") as f:
-                f.write(resp.content)
-            print(f"  ✓ {word} ({len(resp.content)} bytes)")
-            return True
-        else:
-            print(f"  ✗ {word} — HTTP {resp.status_code}: {resp.text[:200]}")
-            return False
+        communicate = edge_tts.Communicate(word, VOICE)
+        await communicate.save(filepath)
+        size = os.path.getsize(filepath)
+        print(f"  ✓ {word} ({size} bytes)")
+        return True
     except Exception as e:
         print(f"  ✗ {word} — Error: {e}")
         return False
 
-def main():
-    if not API_KEY:
-        print("ERROR: ELEVENLABS_API_KEY environment variable not set")
-        exit(1)
-
+async def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     total = len(WORDS)
@@ -189,18 +163,16 @@ def main():
     failed = 0
 
     print(f"Generating audio for {total} words...")
-    print(f"Voice: George ({VOICE_ID})")
-    print(f"Model: {MODEL_ID}")
+    print(f"Voice: {VOICE} (British English)")
     print(f"Output: {OUTPUT_DIR}/")
     print()
 
     for i, word in enumerate(WORDS):
         print(f"[{i+1}/{total}]", end="")
-        if generate_audio(word):
+        if await generate_audio(word):
             success += 1
         else:
             failed += 1
-        time.sleep(0.3)
 
     print()
     print(f"Done! {success} succeeded, {failed} failed out of {total}")
@@ -208,4 +180,4 @@ def main():
         exit(1)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

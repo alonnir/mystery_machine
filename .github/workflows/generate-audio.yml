@@ -2,11 +2,6 @@ name: Generate Pronunciation Audio
 
 on:
   workflow_dispatch:
-    inputs:
-      api_key:
-        description: 'ElevenLabs API Key'
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -26,14 +21,10 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install edge-tts
 
       - name: Generate audio files
-        env:
-          ELEVENLABS_API_KEY: ${{ inputs.api_key }}
-        run: |
-          echo "::add-mask::$ELEVENLABS_API_KEY"
-          python generate_audio_ci.py
+        run: python generate_audio_ci.py
 
       - name: Commit audio files
         if: always()
@@ -44,6 +35,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No new audio files to commit"
           else
-            git commit -m "Add pronunciation audio files via ElevenLabs TTS"
+            git commit -m "Add pronunciation audio files via Edge TTS"
             git push
           fi
