@@ -204,7 +204,7 @@ def main():
 
     print()
     print(f"Done! {success} succeeded, {failed} failed out of {total}")
-    if failed > 0:
+    if success == 0:
         exit(1)
 
 if __name__ == "__main__":

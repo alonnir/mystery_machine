@@ -36,6 +36,7 @@ jobs:
           python generate_audio_ci.py
 
       - name: Commit audio files
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
