@@ -3533,21 +3533,26 @@
         speechSynthesis.onvoiceschanged = loadPreferredVoice;
 
         function pronounceWord(word) {
-            if (!('speechSynthesis' in window)) {
-                alert('Speech synthesis is not supported in this browser.');
-                return;
-            }
-            speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(word);
-            if (preferredVoice) {
-                utterance.voice = preferredVoice;
-                utterance.lang = preferredVoice.lang;
-            } else {
-                utterance.lang = 'en-GB';
-            }
-            utterance.rate = 0.88;
-            utterance.pitch = 1.0;
-            speechSynthesis.speak(utterance);
+            // Try pre-generated audio first, fall back to browser TTS
+            const wordId = word.toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
+            const audioUrl = `audio/${wordId}.mp3`;
+
+            const audio = new Audio(audioUrl);
+            audio.play().catch(() => {
+                // Audio file not found or failed — fall back to browser speech
+                if (!('speechSynthesis' in window)) return;
+                speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(word);
+                if (preferredVoice) {
+                    utterance.voice = preferredVoice;
+                    utterance.lang = preferredVoice.lang;
+                } else {
+                    utterance.lang = 'en-GB';
+                }
+                utterance.rate = 0.88;
+                utterance.pitch = 1.0;
+                speechSynthesis.speak(utterance);
+            });
         }
 
         function showWordDetail(wordIndex) {
