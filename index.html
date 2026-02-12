@@ -398,6 +398,50 @@
             border-color: var(--gold);
         }
 
+        .filter-group {
+            margin-bottom: 12px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 2px solid var(--gold);
+            background: var(--glass-light);
+            backdrop-filter: blur(20px);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 1em;
+            cursor: pointer;
+            transition: var(--transition);
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="%23f0c27f" stroke-width="2" stroke-linecap="round"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            padding-right: 40px;
+        }
+
+        .filter-group select:hover {
+            border-color: var(--coral);
+            box-shadow: 0 0 20px rgba(232, 133, 110, 0.2);
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            box-shadow: 0 0 30px rgba(240, 194, 127, 0.3);
+            border-color: var(--gold);
+        }
+
         .game-modes-title {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 1.3em;
@@ -1772,9 +1816,21 @@
         <!-- Main Menu -->
         <div id="mainMenu">
             <div class="menu-content">
+                <!-- Section Filter -->
+                <div class="filter-group">
+                    <label>Section</label>
+                    <select id="sectionFilter" onchange="switchSection()">
+                        <option value="vocabulary">Vocabulary</option>
+                        <option value="latin">Latin Terms</option>
+                        <option value="sayings">Sayings & Idioms</option>
+                        <option value="britam">British vs American</option>
+                        <option value="avsb">A vs B Comparisons</option>
+                    </select>
+                </div>
+
                 <!-- Category Filter -->
-                <div class="category-section">
-                    <div class="section-label">Select Category</div>
+                <div class="filter-group">
+                    <label>Category</label>
                     <select id="categoryFilter">
                         <option value="all">All Categories</option>
                         <option value="positive">Positive Words</option>
@@ -1798,43 +1854,55 @@
                 <!-- Game Modes -->
                 <h2 class="game-modes-title">Choose a Mode</h2>
                 <div class="game-modes-grid">
-                    <div class="game-mode-card" onclick="startGame('flashcard')">
+                    <div class="game-mode-card" data-mode="flashcard" onclick="startGame('flashcard')">
                         <div class="mode-icon">FC</div>
                         <div class="mode-title">Flashcard</div>
                         <div class="mode-description">Learn with interactive flip cards. Test your knowledge of word meanings.</div>
                     </div>
 
-                    <div class="game-mode-card" onclick="startGame('multiple')">
+                    <div class="game-mode-card" data-mode="multiple" onclick="startGame('multiple')">
                         <div class="mode-icon">MC</div>
                         <div class="mode-title">Multiple Choice</div>
                         <div class="mode-description">Pick the correct definition from four options. Classic challenge.</div>
                     </div>
 
-                    <div class="game-mode-card" onclick="startGame('fillblank')">
+                    <div class="game-mode-card" data-mode="fillblank" onclick="startGame('fillblank')">
                         <div class="mode-icon">FB</div>
                         <div class="mode-title">Fill the Blank</div>
                         <div class="mode-description">Pick the word that completes the sentence correctly.</div>
                     </div>
 
-                    <div class="game-mode-card" onclick="startGame('definition')">
+                    <div class="game-mode-card" data-mode="definition" onclick="startGame('definition')">
                         <div class="mode-icon">DM</div>
                         <div class="mode-title">Definition Match</div>
                         <div class="mode-description">Match words to their definitions. Test your recall abilities.</div>
                     </div>
 
-                    <div class="game-mode-card" onclick="startGame('synonym')">
+                    <div class="game-mode-card" data-mode="synonym" onclick="startGame('synonym')">
                         <div class="mode-icon">SY</div>
                         <div class="mode-title">Synonyms</div>
                         <div class="mode-description">Find the word that means the same. Build your synonym vocabulary.</div>
                     </div>
 
-                    <div class="game-mode-card" onclick="startGame('opposite')">
+                    <div class="game-mode-card" data-mode="opposite" onclick="startGame('opposite')">
                         <div class="mode-icon">OP</div>
                         <div class="mode-title">Opposites</div>
                         <div class="mode-description">Find the word that means the opposite. Test your antonym knowledge.</div>
                     </div>
 
-                    <div class="game-mode-card" onclick="startGame('mixed')">
+                    <div class="game-mode-card" data-mode="britam" onclick="startGame('britam')">
+                        <div class="mode-icon">BA</div>
+                        <div class="mode-title">Brit to American</div>
+                        <div class="mode-description">What's the American English equivalent? Test your transatlantic vocab.</div>
+                    </div>
+
+                    <div class="game-mode-card" data-mode="amtobrit" onclick="startGame('amtobrit')">
+                        <div class="mode-icon">AB</div>
+                        <div class="mode-title">American to Brit</div>
+                        <div class="mode-description">What's the British English equivalent? Think like a Londoner.</div>
+                    </div>
+
+                    <div class="game-mode-card" data-mode="mixed" onclick="startGame('mixed')">
                         <div class="mode-icon">MX</div>
                         <div class="mode-title">Mixed Challenge</div>
                         <div class="mode-description">Random mix of all modes. Keep your skills sharp!</div>
@@ -2714,7 +2782,425 @@
 
         const wordAntonyms = {"Amicable":"Hostile","Benevolent":"Malevolent","Coherent":"Incoherent","Commensurate":"Disproportionate","Commendable":"Contemptible","Conscientious":"Negligent","Convivial":"Unsociable","Courageous":"Cowardly","Diligent":"Lazy","Eloquent":"Inarticulate","Empathetic":"Callous","Erudite":"Ignorant","Ethical":"Unethical","Exemplary":"Deplorable","Fastidious":"Slovenly","Fortuitous":"Unfortunate","Generous":"Stingy","Gregarious":"Solitary","Humble":"Arrogant","Impartial":"Biased","Innovative":"Conventional","Judicious":"Reckless","Magnanimous":"Petty","Meticulous":"Careless","Munificent":"Stingy","Objective":"Subjective","Optimistic":"Pessimistic","Perspicacious":"Obtuse","Philanthropic":"Selfish","Pragmatic":"Idealistic","Prudent":"Reckless","Sagacious":"Foolish","Scrupulous":"Unscrupulous","Steadfast":"Fickle","Tenacious":"Weak","Trustworthy":"Untrustworthy","Veracious":"Dishonest","Virtuous":"Vicious","Aberrant":"Normal","Abrasive":"Gentle","Aloof":"Friendly","Apathetic":"Passionate","Arrogant":"Humble","Avaricious":"Generous","Bellicose":"Peaceful","Belligerent":"Peaceful","Cantankerous":"Pleasant","Capricious":"Consistent","Conceited":"Humble","Conniving":"Honest","Dastardly":"Honorable","Deceitful":"Honest","Derisive":"Respectful","Dogmatic":"Flexible","Duplicitous":"Honest","Egocentric":"Altruistic","Fallacious":"Valid","Glib":"Thoughtful","Haughty":"Humble","Hypocritical":"Sincere","Imperious":"Humble","Impetuous":"Cautious","Indolent":"Diligent","Insolent":"Respectful","Malevolent":"Benevolent","Mendacious":"Truthful","Miserly":"Generous","Narcissistic":"Selfless","Nefarious":"Virtuous","Obsequious":"Assertive","Obstinate":"Flexible","Ostentatious":"Modest","Parsimonious":"Generous","Petulant":"Patient","Pompous":"Modest","Pretentious":"Modest","Pugnacious":"Peaceful","Quarrelsome":"Agreeable","Querulous":"Content","Rapacious":"Generous","Recalcitrant":"Obedient","Sanctimonious":"Sincere","Sardonic":"Sincere","Slovenly":"Neat","Surreptitious":"Open","Truculent":"Peaceful","Uncouth":"Refined","Unscrupulous":"Principled","Vacuous":"Thoughtful","Vindictive":"Forgiving","Adamant":"Flexible","Alluring":"Repellent","Ardent":"Apathetic","Baleful":"Benign","Cacophony":"Harmony","Chaotic":"Orderly","Clandestine":"Open","Cogent":"Weak","Convoluted":"Simple","Cornucopia":"Scarcity","Cryptic":"Clear","Decorous":"Improper","Ebullient":"Subdued","Effervescent":"Dull","Enigmatic":"Clear","Ephemeral":"Permanent","Ethereal":"Earthly","Euphoric":"Miserable","Florid":"Pale","Furtive":"Open","Garrulous":"Taciturn","Haphazard":"Systematic","Immaculate":"Filthy","Impervious":"Permeable","Inscrutable":"Obvious","Jocular":"Serious","Laconic":"Verbose","Loquacious":"Taciturn","Luminous":"Dark","Mercurial":"Stable","Myriad":"Few","Nebulous":"Clear","Opulent":"Sparse","Palpable":"Imperceptible","Penurious":"Abundant","Placid":"Turbulent","Precarious":"Stable","Pristine":"Dirty","Quaint":"Modern","Resplendent":"Dull","Scintillating":"Dull","Serendipitous":"Unfortunate","Somnolent":"Alert","Stoic":"Emotional","Succinct":"Verbose","Superfluous":"Essential","Tawdry":"Elegant","Tempestuous":"Calm","Torpid":"Energetic","Ubiquitous":"Rare","Undulating":"Flat","Vivacious":"Dull","Volatile":"Stable","Altruism":"Selfishness","Ambiguity":"Clarity","Autonomy":"Dependence","Camaraderie":"Hostility","Complacency":"Vigilance","Elation":"Despair","Empathy":"Indifference","Ennui":"Enthusiasm","Equanimity":"Anxiety","Fallacy":"Truth","Fortitude":"Weakness","Hegemony":"Equality","Hubris":"Humility","Infamy":"Honor","Insouciance":"Concern","Levity":"Seriousness","Malaise":"Wellness","Nuance":"Simplicity","Optimism":"Pessimism","Perseverance":"Quitting","Pessimism":"Optimism","Piety":"Irreverence","Pragmatism":"Idealism","Resilience":"Fragility","Reverence":"Disrespect","Synergy":"Discord","Temerity":"Caution","Tranquility":"Turmoil","Veracity":"Falsehood","Abdicate":"Assume","Acquiesce":"Resist","Admonish":"Praise","Advocate":"Oppose","Belittle":"Praise","Capitulate":"Resist","Coalesce":"Separate","Coerce":"Persuade","Condone":"Condemn","Conflate":"Distinguish","Corroborate":"Contradict","Decry":"Praise","Delineate":"Obscure","Disseminate":"Suppress","Elucidate":"Confuse","Encroach":"Retreat","Enervate":"Energize","Espouse":"Reject","Exacerbate":"Improve","Exonerate":"Convict","Facilitate":"Hinder","Galvanize":"Sedate","Instigate":"Calm","Lambaste":"Praise","Obfuscate":"Clarify","Perpetuate":"End","Placate":"Anger","Refute":"Confirm","Renounce":"Accept","Undermine":"Support","Usurp":"Yield","Validate":"Invalidate","Wane":"Wax","Acumen":"Dullness","Affinity":"Aversion","Alacrity":"Sluggishness","Austerity":"Luxury","Brevity":"Length","Candid":"Evasive","Chuffed":"Displeased","Dearth":"Abundance","Decorum":"Impropriety","Dissonance":"Harmony","Efficacy":"Ineffectiveness","Elusive":"Obvious","Fetching":"Repulsive","Finesse":"Clumsiness","Fluctuate":"Stabilize","Heinous":"Virtuous","Inept":"Skillful","Inexorable":"Avoidable","Resilient":"Fragile","Solace":"Misery","Tenuous":"Strong","Adjudicate":"Ignore","Ambiguous":"Clear","Ameliorate":"Worsen","Approbation":"Disapproval","Assiduous":"Lazy","Auspicious":"Inauspicious","Autonomous":"Dependent","Bellwether":"Follower","Circumspect":"Reckless","Contrite":"Unrepentant","Corpulent":"Thin","Deference":"Disrespect","Derision":"Respect","Discern":"Overlook","Disparate":"Similar","Efficacious":"Ineffective","Expedient":"Impractical","Incontrovertible":"Debatable","Insidious":"Obvious","Mitigate":"Aggravate","Opprobrium":"Praise","Perfunctory":"Thorough","Pernicious":"Benign","Promulgate":"Suppress","Propriety":"Impropriety","Prosaic":"Imaginative","Reticent":"Talkative","Retrenchment":"Expansion","Salient":"Obscure","Substantiate":"Disprove","Sycophant":"Critic","Unprecedented":"Common","Verbatim":"Paraphrased","Zealous":"Apathetic","Ambivalence":"Certainty","Anguish":"Joy","Apathy":"Enthusiasm","Apprehension":"Confidence","Awe":"Contempt","Contentment":"Discontent","Despondency":"Hopefulness","Euphoria":"Depression","Exasperation":"Patience","Foreboding":"Hope","Gratification":"Disappointment","Melancholy":"Cheerfulness","Misgiving":"Confidence","Resentment":"Goodwill","Serenity":"Anxiety","Solace":"Torment","Trepidation":"Confidence","Zeal":"Apathy","Befuddled":"Clear","Beleaguered":"Supported","Boisterous":"Quiet","Felicity":"Misfortune","Insatiable":"Satisfied","Lethargy":"Vitality","Peculiar":"Common","Quiescent":"Active","Quintessential":"Atypical","Unfathomable":"Understandable","Utopia":"Dystopia","Zenith":"Nadir"};
 
+        const latinTerms = [
+    {word: "Ad hoc", definition: "Created for a particular purpose as necessary.", pronunciation: "ad HOK"},
+    {word: "Alibi", definition: "A claim of being elsewhere when a crime occurred.", pronunciation: "AL-ih-by"},
+    {word: "Arrears", definition: "Money owed that should have been paid earlier.", pronunciation: "uh-REERZ"},
+    {word: "Bona fide", definition: "Genuine; real.", pronunciation: "BOH-nuh FY-dee"},
+    {word: "Carpe diem", definition: "Seize the day.", pronunciation: "KAR-peh DEE-em"},
+    {word: "Caveat", definition: "A warning or proviso.", pronunciation: "KAV-ee-at"},
+    {word: "De facto", definition: "In fact, whether by right or not.", pronunciation: "de FAK-toh"},
+    {word: "Ergo", definition: "Therefore.", pronunciation: "UR-goh"},
+    {word: "Ex officio", definition: "By virtue of one's position or status.", pronunciation: "eks uh-FISH-ee-oh"},
+    {word: "Fulcrum", definition: "The point on which a lever rests or pivots.", pronunciation: "FUL-kruhm"},
+    {word: "Grosso modo", definition: "Roughly speaking; approximately.", pronunciation: "GROH-soh MOH-doh"},
+    {word: "Habeas corpus", definition: "A writ requiring a person under arrest to appear before a judge.", pronunciation: "HAY-bee-uhs KOR-puhs"},
+    {word: "Honorarium", definition: "A payment for professional services.", pronunciation: "on-uh-RAIR-ee-uhm"},
+    {word: "In absentia", definition: "While not present.", pronunciation: "in ab-SEN-shee-uh"},
+    {word: "Ipso facto", definition: "By that very fact or act.", pronunciation: "IP-soh FAK-toh"},
+    {word: "Mea culpa", definition: "An acknowledgment of one's fault or error.", pronunciation: "MAY-uh KUL-puh"},
+    {word: "Modus operandi", definition: "A particular way of doing something.", pronunciation: "MOH-duhs op-er-AN-dee"},
+    {word: "Omertà", definition: "A code of silence about criminal activity.", pronunciation: "oh-MER-tah"},
+    {word: "Per annum", definition: "For each year.", pronunciation: "pur AN-um"},
+    {word: "Per capita", definition: "For each person.", pronunciation: "pur KAP-ih-tuh"},
+    {word: "Per se", definition: "By itself; intrinsically.", pronunciation: "pur SAY"},
+    {word: "Pro bono", definition: "Done without compensation for public good.", pronunciation: "proh BOH-noh"},
+    {word: "Quid pro quo", definition: "A favour granted in return for something.", pronunciation: "kwid proh KWOH"},
+    {word: "Quorum", definition: "The minimum number needed for proceedings.", pronunciation: "KWOR-uhm"},
+    {word: "Reductio ad absurdum", definition: "Proving something false by showing absurd consequences.", pronunciation: "rih-DUK-tee-oh ad ab-SUR-dum"},
+    {word: "Status quo", definition: "The existing state of affairs.", pronunciation: "STAY-tuhs KWOH"},
+    {word: "Subpoena", definition: "A writ ordering a person to attend court.", pronunciation: "suh-PEE-nuh"},
+    {word: "Vice versa", definition: "With the main items reversed.", pronunciation: "VY-see VUR-suh"}
+];
+
+const sayingsIdioms = [
+    {word: "A load of tosh", definition: "Nonsense; rubbish.", origin: "British"},
+    {word: "A skunk at the garden party", definition: "An unwelcome presence that ruins an event.", origin: "American"},
+    {word: "A thorn in my side", definition: "A constant source of annoyance.", origin: "Biblical origin"},
+    {word: "A very big name in a very small room", definition: "Someone important only in a limited context.", origin: ""},
+    {word: "As useful as a chocolate teapot", definition: "Completely useless.", origin: "British"},
+    {word: "At an ebb", definition: "At a low point or in decline.", origin: "Nautical origin"},
+    {word: "Batten down the hatches", definition: "Prepare for trouble or difficulty.", origin: "Nautical origin"},
+    {word: "Bricking it", definition: "Very scared or nervous.", origin: "British slang"},
+    {word: "Can't be arsed", definition: "Can't be bothered.", origin: "British slang"},
+    {word: "Chickens coming home to roost", definition: "Past mistakes coming back to cause problems.", origin: ""},
+    {word: "Chomping at the bit", definition: "Eager and impatient to do something.", origin: "From horse riding"},
+    {word: "Come up trumps", definition: "To be successful, especially unexpectedly.", origin: "From card games"},
+    {word: "Dancing on the head of a pin", definition: "Engaging in pointless debate over trivialities.", origin: "Medieval theological debates"},
+    {word: "Dog's dinner", definition: "A mess; also, dressed flashily.", origin: "British"},
+    {word: "Ebb and flow", definition: "The way something varies or changes.", origin: "Nautical origin"},
+    {word: "Even money", definition: "Equal chances of success or failure.", origin: "Gambling"},
+    {word: "Find one's footing", definition: "Establish oneself securely in a situation.", origin: ""},
+    {word: "Fits and starts", definition: "Irregular bursts of activity.", origin: ""},
+    {word: "Gnashing of teeth", definition: "Expressing anguish or frustration.", origin: "Biblical"},
+    {word: "Grinning like a Cheshire cat", definition: "Having a broad, mischievous smile.", origin: "From Alice in Wonderland"},
+    {word: "Grist to the mill", definition: "Something that can be used to advantage.", origin: "From grain milling"},
+    {word: "Happy as a dog with two tails", definition: "Extremely happy.", origin: ""},
+    {word: "Haven't the foggiest", definition: "Have no idea at all.", origin: "British"},
+    {word: "Having a barney", definition: "Having an argument.", origin: "British slang"},
+    {word: "In a bizzle", definition: "In a moment; soon.", origin: "British slang"},
+    {word: "In tow", definition: "Being pulled along or accompanied.", origin: "Nautical"},
+    {word: "It's hard to read the label from inside the bottle", definition: "Difficult to see your own situation clearly.", origin: ""},
+    {word: "Keep at arm's length", definition: "Avoid becoming too friendly or involved.", origin: ""},
+    {word: "Lose one's rag", definition: "Lose one's temper.", origin: "British"},
+    {word: "No one is as smart as you think or dumb as you hope", definition: "People are rarely as extreme as we assume.", origin: ""},
+    {word: "Not least by", definition: "Especially because of.", origin: ""},
+    {word: "Not on your nelly", definition: "Absolutely not.", origin: "British (Cockney rhyming slang)"},
+    {word: "On an even keel", definition: "Steady, stable, and well-balanced.", origin: "Nautical origin"},
+    {word: "One swallow does not make a summer", definition: "One good event doesn't mean things are permanently better.", origin: "From Aristotle"},
+    {word: "Overplay one's hand", definition: "Spoil one's chance by trying too hard.", origin: "From card games"},
+    {word: "Pride comes before the fall", definition: "Arrogance leads to downfall.", origin: "Biblical (Proverbs)"},
+    {word: "Put the cat among the pigeons", definition: "Do something to cause trouble or controversy.", origin: "British"},
+    {word: "Shoe-leather", definition: "Effort expended in walking or investigating.", origin: "Journalism"},
+    {word: "Showing someone up", definition: "Embarrassing someone publicly.", origin: ""},
+    {word: "Snatched defeat from the jaws of victory", definition: "Lost when winning seemed certain.", origin: ""},
+    {word: "Spick and span", definition: "Neat, clean, and tidy.", origin: ""},
+    {word: "Squeaky wheel gets the oil", definition: "Those who complain loudest get attention.", origin: "American"},
+    {word: "Strings to one's bow", definition: "Multiple skills or options available.", origin: "From archery"},
+    {word: "Taking it in stride", definition: "Dealing calmly with difficulties.", origin: ""},
+    {word: "The answer is a piece of string", definition: "The answer depends entirely on circumstances.", origin: ""},
+    {word: "The bee's knees", definition: "An excellent person or thing.", origin: "1920s slang"},
+    {word: "The nature of the beast", definition: "The inherent character of something.", origin: ""},
+    {word: "The thin end of the wedge", definition: "A small beginning that leads to bigger problems.", origin: ""},
+    {word: "Toe the line", definition: "Conform to rules or standards.", origin: ""},
+    {word: "Trump card", definition: "A decisive advantage held in reserve.", origin: "From card games"},
+    {word: "Turkeys don't vote for Christmas", definition: "People don't support things against their interests.", origin: "British"},
+    {word: "Two halves of the same walnut", definition: "Very similar things or people.", origin: ""},
+    {word: "Waiting with bated breath", definition: "Anxiously anticipating something.", origin: ""},
+    {word: "Went down like a lead balloon", definition: "Was very poorly received.", origin: ""},
+    {word: "Won't be a tick", definition: "Will only be a moment.", origin: "British"},
+    {word: "Off one's trolley", definition: "Mad or insane.", origin: "British slang"},
+    {word: "On the piss", definition: "Drinking alcohol, usually heavily.", origin: "British slang (vulgar)"},
+    {word: "Sod's law", definition: "Anything that can go wrong will go wrong.", origin: "British (similar to Murphy's Law)"},
+    {word: "Taking the mickey", definition: "Teasing or making fun of someone.", origin: "British slang"},
+    {word: "Throw a spanner in the works", definition: "To cause problems or prevent something from happening.", origin: "British"},
+    {word: "Throw in the towel", definition: "To give up or admit defeat.", origin: "From boxing"},
+    {word: "Up for grabs", definition: "Available to anyone who is interested.", origin: "Informal"},
+    {word: "CBA", definition: "Can't be arsed (can't be bothered)", origin: "Slang"},
+    {word: "Ta", definition: "Thanks", origin: "Slang"}
+];
+
+const britVsAmericanVocab = [
+    {british: "Aubergine", american: "Eggplant", note: ""},
+    {british: "Autumn", american: "Fall", note: "Seasons"},
+    {british: "Baked beans", american: "Pork and beans", note: ""},
+    {british: "Banger", american: "Sausage", note: ""},
+    {british: "Barrister", american: "Trial lawyer", note: ""},
+    {british: "Beetroot", american: "Beets", note: ""},
+    {british: "Bill (restaurant)", american: "Check", note: ""},
+    {british: "Biro", american: "Ballpoint pen", note: ""},
+    {british: "Biscuit", american: "Cookie", note: ""},
+    {british: "Bonnet", american: "Hood (of a car)", note: ""},
+    {british: "Boot", american: "Trunk (of a car)", note: ""},
+    {british: "Braces", american: "Suspenders", note: "Braces = orthodontic in US"},
+    {british: "Brolly", american: "Umbrella", note: ""},
+    {british: "Bum bag", american: "Fanny pack", note: ""},
+    {british: "Bungalow", american: "Ranch-style house", note: ""},
+    {british: "Car park", american: "Parking lot", note: ""},
+    {british: "Caravan", american: "Trailer/RV", note: ""},
+    {british: "Chemist", american: "Pharmacy", note: ""},
+    {british: "Chips", american: "French fries", note: ""},
+    {british: "Clingfilm", american: "Plastic wrap", note: ""},
+    {british: "Cooker", american: "Stove/Oven", note: ""},
+    {british: "Coriander", american: "Cilantro", note: ""},
+    {british: "Cot", american: "Crib", note: ""},
+    {british: "Cotton bud", american: "Q-tip", note: ""},
+    {british: "Cotton wool", american: "Cotton balls", note: ""},
+    {british: "Courgette", american: "Zucchini", note: ""},
+    {british: "Crisps", american: "Potato chips", note: ""},
+    {british: "Curtains", american: "Drapes", note: ""},
+    {british: "Diary", american: "Calendar/Planner", note: ""},
+    {british: "Drawing pin", american: "Thumbtack", note: ""},
+    {british: "Dressing gown", american: "Robe", note: ""},
+    {british: "Dual carriageway", american: "Divided highway", note: ""},
+    {british: "Dummy", american: "Pacifier", note: ""},
+    {british: "Dungarees", american: "Overalls", note: ""},
+    {british: "Dustbin", american: "Trash can", note: ""},
+    {british: "Engaged (phone)", american: "Busy (line)", note: ""},
+    {british: "Estate car", american: "Station wagon", note: ""},
+    {british: "Fizzy drink", american: "Soda/Pop", note: ""},
+    {british: "Flat", american: "Apartment", note: ""},
+    {british: "Flyover", american: "Overpass", note: ""},
+    {british: "Football", american: "Soccer", note: ""},
+    {british: "Fortnight", american: "Two weeks", note: ""},
+    {british: "Fringe", american: "Bangs", note: "Hair"},
+    {british: "Full stop", american: "Period", note: "Punctuation"},
+    {british: "Garden", american: "Yard", note: ""},
+    {british: "Gherkin", american: "Pickle", note: ""},
+    {british: "Ground floor", american: "First floor", note: ""},
+    {british: "Handbag", american: "Purse", note: ""},
+    {british: "Hire", american: "Rent", note: ""},
+    {british: "Holiday", american: "Vacation", note: ""},
+    {british: "Hoover", american: "Vacuum cleaner", note: "Brand name"},
+    {british: "Ice lolly", american: "Popsicle", note: ""},
+    {british: "Jacket potato", american: "Baked potato", note: ""},
+    {british: "Jam", american: "Jelly", note: "Fruit preserve"},
+    {british: "Jelly", american: "Jello", note: "Dessert"},
+    {british: "Jug", american: "Pitcher", note: ""},
+    {british: "Jumper", american: "Sweater", note: ""},
+    {british: "Junction", american: "Intersection", note: ""},
+    {british: "Lift", american: "Elevator", note: ""},
+    {british: "Lorry", american: "Truck", note: ""},
+    {british: "Maths", american: "Math", note: ""},
+    {british: "Mobile", american: "Cellphone", note: ""},
+    {british: "Mum", american: "Mom", note: ""},
+    {british: "Nappy", american: "Diaper", note: ""},
+    {british: "Noughts and crosses", american: "Tic-tac-toe", note: "Game"},
+    {british: "Nursery school", american: "Preschool", note: ""},
+    {british: "Off-licence", american: "Liquor store", note: ""},
+    {british: "Overtaking", american: "Passing", note: "Driving"},
+    {british: "Pavement", american: "Sidewalk", note: ""},
+    {british: "Petrol", american: "Gasoline", note: ""},
+    {british: "Plaster", american: "Band-Aid", note: "Adhesive bandage"},
+    {british: "Post", american: "Mail", note: ""},
+    {british: "Postbox", american: "Mailbox", note: ""},
+    {british: "Postcode", american: "Zip code", note: ""},
+    {british: "Pram", american: "Stroller", note: ""},
+    {british: "Queue", american: "Line", note: ""},
+    {british: "Ring (phone)", american: "Call", note: ""},
+    {british: "Roundabout", american: "Traffic circle/Rotary", note: ""},
+    {british: "Rubber", american: "Eraser", note: "Also slang for condom in UK"},
+    {british: "Rubbish bin", american: "Garbage can", note: ""},
+    {british: "Saloon car", american: "Sedan", note: ""},
+    {british: "Sellotape", american: "Scotch tape", note: "Brand names"},
+    {british: "Shop", american: "Store", note: ""},
+    {british: "Skirting board", american: "Baseboard", note: ""},
+    {british: "Sledge", american: "Sled", note: ""},
+    {british: "Solicitor", american: "Attorney/Lawyer", note: ""},
+    {british: "Spanner", american: "Wrench", note: ""},
+    {british: "Sparkling water", american: "Carbonated water", note: ""},
+    {british: "Stabilisers", american: "Training wheels", note: "Bicycle"},
+    {british: "Surgery", american: "Doctor's office", note: ""},
+    {british: "Swede", american: "Rutabaga", note: "Vegetable"},
+    {british: "Ta", american: "Thanks", note: "British informal"},
+    {british: "Takeaway", american: "Takeout", note: ""},
+    {british: "Tap", american: "Faucet", note: ""},
+    {british: "Telly", american: "Television/TV", note: ""},
+    {british: "Timetable", american: "Schedule", note: ""},
+    {british: "Tin", american: "Can", note: ""},
+    {british: "Tip", american: "Dump/Landfill", note: "Rubbish disposal site"},
+    {british: "To let", american: "For rent", note: "Property"},
+    {british: "Torch", american: "Flashlight", note: ""},
+    {british: "Trainers", american: "Sneakers", note: ""},
+    {british: "Trolley", american: "Shopping cart", note: ""},
+    {british: "Underground/Tube", american: "Subway", note: "London transit"},
+    {british: "Waistcoat", american: "Vest", note: ""},
+    {british: "Washing-up liquid", american: "Dish soap", note: ""},
+    {british: "Wellington boots", american: "Rain boots", note: ""},
+    {british: "Windscreen", american: "Windshield", note: ""},
+    {british: "Zebra crossing", american: "Crosswalk", note: ""},
+    {british: "Zed", american: "Zee", note: "Letter 'Z'"}
+];
+
+const britVsAmericanSpelling = [
+    {british: "Colour", american: "Color"},
+    {british: "Favour", american: "Favor"},
+    {british: "Honour", american: "Honor"},
+    {british: "Rumour", american: "Rumor"},
+    {british: "Centre", american: "Center"},
+    {british: "Theatre", american: "Theater"},
+    {british: "Metre", american: "Meter"},
+    {british: "Licence (n)", american: "License"},
+    {british: "Defence", american: "Defense"},
+    {british: "Offence", american: "Offense"},
+    {british: "Grey", american: "Gray"},
+    {british: "Travelling", american: "Traveling"},
+    {british: "Signalling", american: "Signaling"},
+    {british: "Cancelled", american: "Canceled"}
+];
+
+const aVsBComparisons = {
+    "mug_vs_cup": {
+        title: "Mug vs Cup",
+        headers: ["Aspect", "Mug", "Cup"],
+        rows: [
+            ["Handle", "Single, large handle", "May have one handle or two (teacup)"],
+            ["Shape", "Cylindrical, straight sides", "Often tapered or rounded"],
+            ["Saucer", "Never has a saucer", "Often paired with a saucer"],
+            ["Size", "Typically larger (250-350ml)", "Typically smaller (150-250ml)"],
+            ["Use", "Informal, everyday", "Can be formal (teacup)"],
+            ["Material", "Often ceramic or enamel", "Ceramic, bone china, porcelain"]
+        ]
+    },
+    "light_vs_lite": {
+        title: "\"Light\" vs \"Lite\"",
+        headers: ["Aspect", "Light", "Lite"],
+        rows: [
+            ["Standard English", "Yes - the correct spelling", "No - informal/marketing term"],
+            ["Meanings", "Natural agent for visibility; not heavy; low-fat/calorie", "Only: low-calorie or low-fat"],
+            ["Usage", "All contexts", "Primarily product packaging (US)"],
+            ["Example", "\"light beer\", \"light salad dressing\"", "\"lite yogurt\", \"lite chips\""],
+            ["Formality", "Formal and informal", "Informal only"],
+            ["Recognition", "Oxford English Dictionary standard", "Regarded as less preferred form"]
+        ]
+    },
+    "tea_british": {
+        title: "Tea (British meanings)",
+        headers: ["Context", "Meaning"],
+        rows: [
+            ["Tea (beverage)", "The hot drink made from tea leaves"],
+            ["Tea (meal - South)", "Afternoon tea; light meal with sandwiches and cakes"],
+            ["Tea (meal - North)", "Evening meal; dinner"]
+        ]
+    },
+    "image_vs_photo": {
+        title: "Image vs Photo",
+        headers: ["Aspect", "Image", "Photo"],
+        rows: [
+            ["Definition", "A visual representation of something", "A picture made using a camera"],
+            ["Scope", "Broader - includes drawings, graphics, digital art, photos", "Narrower - specifically photographs"],
+            ["Origin", "Can be created by any means", "Created by capturing light on a sensor/film"],
+            ["Usage", "\"Digital image\", \"brand image\", \"mental image\"", "\"Take a photo\", \"photo album\""],
+            ["Technical", "Any visual file (PNG, SVG, etc.)", "Usually JPEG, implies real-world capture"]
+        ]
+    },
+    "blinds_vs_curtains": {
+        title: "Blinds vs Curtains",
+        headers: ["Aspect", "Blinds", "Curtains"],
+        rows: [
+            ["Material", "Hard materials (wood, metal, plastic)", "Soft fabric"],
+            ["Mechanism", "Slats that tilt or roll up", "Hang from a rod, drawn sideways or tied back"],
+            ["Light control", "Precise - can angle slats", "Less precise - open or closed"],
+            ["Insulation", "Less insulating", "Better thermal and sound insulation"],
+            ["Style", "Modern, minimalist", "Traditional, cosy, decorative"],
+            ["Cleaning", "Wipe down", "Usually require washing"]
+        ]
+    },
+    "display_vs_screen_vs_monitor": {
+        title: "Display vs Screen vs Monitor",
+        headers: ["Aspect", "Display", "Screen", "Monitor"],
+        rows: [
+            ["Definition", "Technology that shows visual output", "The physical surface showing images", "A standalone display device"],
+            ["Scope", "Broadest - any visual output system", "The viewing surface itself", "Specific hardware device"],
+            ["Usage", "\"OLED display\", \"display technology\"", "\"Touch screen\", \"screen size\"", "\"Computer monitor\", \"monitor settings\""],
+            ["Context", "Technical specifications", "Physical component", "Complete peripheral device"],
+            ["Examples", "\"Retina display\"", "\"Cracked screen\"", "\"Dual monitor setup\""]
+        ]
+    },
+    "deliberation_vs_debate": {
+        title: "Deliberation vs Debate",
+        headers: ["Aspect", "Deliberation", "Debate"],
+        rows: [
+            ["Purpose", "Careful consideration to reach a decision", "Arguing opposing viewpoints"],
+            ["Tone", "Thoughtful, measured, collaborative", "Competitive, adversarial"],
+            ["Outcome", "Consensus or considered decision", "Winner/loser or unchanged positions"],
+            ["Format", "Discussion, weighing options", "Structured argument with sides"],
+            ["Example", "\"Jury deliberation\"", "\"Parliamentary debate\""],
+            ["Etymology", "Latin deliberare (to weigh carefully)", "Latin battere (to fight)"]
+        ]
+    },
+    "protest_vs_demonstration": {
+        title: "Protest vs Demonstration",
+        headers: ["Aspect", "Protest", "Demonstration"],
+        rows: [
+            ["Connotation", "Opposition, dissent, against something", "Can be for or against; showing support"],
+            ["Tone", "Often more confrontational", "Can be peaceful display"],
+            ["Focus", "Expressing disagreement", "Displaying opinion publicly"],
+            ["Examples", "\"Protest the decision\"", "\"Demonstration of support\""],
+            ["Overlap", "All protests are demonstrations", "Not all demonstrations are protests"]
+        ]
+    },
+    "efficiency_vs_efficacy": {
+        title: "Efficiency vs Efficacy",
+        headers: ["Aspect", "Efficiency", "Efficacy"],
+        rows: [
+            ["Definition", "Doing things with minimal waste (time, resources)", "Ability to produce the desired result"],
+            ["Focus", "How well resources are used", "Whether it works at all"],
+            ["Question answered", "\"How economically does it work?\"", "\"Does it work?\""],
+            ["Example", "\"The engine's fuel efficiency\"", "\"The drug's efficacy in trials\""],
+            ["Measurement", "Output relative to input", "Success rate at achieving goal"],
+            ["Context", "Operations, processes", "Medicine, treatments, methods"]
+        ]
+    },
+    "cement_vs_concrete": {
+        title: "Cement vs Concrete",
+        headers: ["Aspect", "Cement", "Concrete"],
+        rows: [
+            ["Definition", "A binding powder/paste", "A building material"],
+            ["Composition", "iteite calcium, silicon, aluminum, iron", "Cement + water + sand + gravel/aggregate"],
+            ["Role", "Ingredient (the \"glue\")", "Final product"],
+            ["Usage", "Mixed with water to bind materials", "Used for construction (paths, buildings)"],
+            ["Standalone", "Rarely used alone", "Used as structural material"],
+            ["Common error", "\"Cement pavement\" ✗", "\"Concrete pavement\" ✓"]
+        ]
+    },
+    "under_vs_below_vs_beneath": {
+        title: "Under vs Below vs Beneath",
+        headers: ["Aspect", "Under", "Below", "Beneath"],
+        rows: [
+            ["Physical position", "Directly underneath, covered by", "Lower than, not necessarily directly", "Directly underneath (formal)"],
+            ["Contact", "Often implies contact or covering", "Usually no contact", "May or may not have contact"],
+            ["Formality", "Neutral", "Neutral", "More formal/literary"],
+            ["Abstract use", "\"Under pressure\", \"under control\"", "\"Below average\", \"below zero\"", "\"Beneath one's dignity\""],
+            ["Example", "\"Under the table\"", "\"Below sea level\"", "\"Beneath the surface\""],
+            ["Nuance", "Covered or controlled by", "Lower in position/rank", "Can imply \"unworthy of\""]
+        ]
+    },
+    "sieve_vs_sift_vs_colander_vs_strainer": {
+        title: "Sieve vs Sift vs Colander vs Strainer",
+        headers: ["Aspect", "Sieve", "Sift", "Colander", "Strainer"],
+        rows: [
+            ["Type", "Noun (tool)", "Verb (action)", "Noun (tool)", "Noun (tool)"],
+            ["Mesh size", "Fine mesh", "N/A - the action", "Large holes", "Variable mesh"],
+            ["Primary use", "Flour, fine particles", "Separating fine from coarse", "Draining pasta, vegetables", "Draining liquids, catching solids"],
+            ["Shape", "Flat or bowl with handle", "N/A", "Bowl with handles, feet", "Bowl or cone with handle"],
+            ["Example", "\"Pass through a sieve\"", "\"Sift the flour\"", "\"Drain in a colander\"", "\"Pour through a strainer\""]
+        ]
+    },
+    "warm_vs_hot": {
+        title: "Warm vs Hot",
+        headers: ["Aspect", "Warm", "Hot"],
+        rows: [
+            ["Temperature", "Moderately heated, comfortable", "High temperature, potentially uncomfortable"],
+            ["Touch", "Pleasant to touch", "May be too hot to touch"],
+            ["Tea/drinks", "Cooled down, drinkable", "Freshly made, may need to cool"],
+            ["Perception", "Comfortable, cosy", "Intense, can be unpleasant"],
+            ["Weather", "Pleasant (15-25°C)", "Uncomfortable heat (30°C+)"],
+            ["Figurative", "\"Warm welcome\" (friendly)", "\"Hot temper\" (intense)"]
+        ]
+    },
+    "discreet_vs_discrete_vs_discretion": {
+        title: "Discreet vs Discrete vs Discretion",
+        headers: ["Aspect", "Discreet", "Discrete", "Discretion"],
+        rows: [
+            ["Meaning", "Careful not to attract attention; tactful", "Separate, individually distinct", "The quality of being discreet; freedom to decide"],
+            ["Part of speech", "Adjective", "Adjective", "Noun"],
+            ["Usage", "\"Be discreet about the surprise\"", "\"Three discrete categories\"", "\"Use your discretion\""],
+            ["Context", "Social situations, secrecy", "Mathematics, data, classification", "Judgment, confidentiality"],
+            ["Memory tip", "Discreet = \"ee\" together (keeping together/secret)", "Discrete = \"e\"s separated (things separated)", "Related to \"discreet\""],
+            ["Common error", "Often confused with discrete", "Often confused with discreet", "N/A"]
+        ]
+    },
+    "titled_vs_entitled": {
+        title: "Titled vs Entitled",
+        headers: ["Aspect", "Titled", "Entitled"],
+        rows: [
+            ["Meaning 1", "Having a title (nobility)", "Having a right to something"],
+            ["Meaning 2", "Named/called (for works)", "Named/called (for works) - disputed"],
+            ["Nobility", "\"A titled lady\" (has noble title)", "Not used for nobility"],
+            ["Rights", "Not used for rights", "\"Entitled to a refund\""],
+            ["Works", "\"A book titled 'War and Peace'\"", "\"A book entitled 'War and Peace'\" (acceptable)"],
+            ["Preference", "Preferred for naming works", "Preferred for rights; acceptable for works"],
+            ["Note", "Less ambiguous for naming", "Can sound pretentious for naming"]
+        ]
+    },
+    "rule_vs_law": {
+        title: "Rule vs Law",
+        headers: ["Aspect", "Rule", "Law"],
+        rows: [
+            ["Authority", "Can be informal or formal", "Formal, established by government/nature"],
+            ["Enforcement", "Varies; social pressure, guidelines", "Legal system, courts, or natural forces"],
+            ["Flexibility", "Can be bent or broken informally", "Breaking has serious consequences"],
+            ["Scope", "Specific contexts (games, house rules)", "Society-wide or universal"],
+            ["\"Of the jungle\"", "✗ \"Rule of the jungle\" (incorrect)", "✓ \"Law of the jungle\" (correct idiom)"],
+            ["Examples", "\"House rules\", \"rules of the game\"", "\"Criminal law\", \"laws of physics\""],
+            ["Nature", "Human-made guidelines", "Can be natural (\"law of gravity\")"]
+        ]
+    }
+};
+
         // Game state
+        let currentSection = 'vocabulary';
         let currentMode = '';
         let currentCategory = 'all';
         let currentWords = [];
@@ -2861,6 +3347,63 @@
                 return shuffleArray(allWords);
             }
             return shuffleArray([...vocabulary[currentCategory]]);
+        }
+
+        function getSectionWords() {
+            const cat = document.getElementById('categoryFilter').value;
+
+            if (currentSection === 'vocabulary') {
+                return getWords(); // existing behavior
+            }
+
+            if (currentSection === 'latin') {
+                return shuffleArray(latinTerms.map(t => ({
+                    ...t, id: t.word.toLowerCase().replace(/\s+/g, '_'), category: 'latin'
+                })));
+            }
+
+            if (currentSection === 'sayings') {
+                let items = sayingsIdioms.map(s => ({
+                    ...s, id: s.word.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''), category: s.origin || 'Other'
+                }));
+                if (cat !== 'all') {
+                    if (cat === 'Nautical') items = items.filter(i => i.category.toLowerCase().includes('nautical'));
+                    else if (cat === 'Biblical') items = items.filter(i => i.category.toLowerCase().includes('biblical'));
+                    else if (cat === 'British') items = items.filter(i => i.category.toLowerCase().includes('british'));
+                    else if (cat === 'other') items = items.filter(i => !['british','nautical','biblical'].some(k => i.category.toLowerCase().includes(k)));
+                }
+                return shuffleArray(items);
+            }
+
+            if (currentSection === 'britam') {
+                let vocabItems = britVsAmericanVocab.map(b => ({
+                    word: b.british, definition: b.american, note: b.note,
+                    id: 'ba_' + b.british.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+                    category: 'vocab', british: b.british, american: b.american
+                }));
+                let spellingItems = britVsAmericanSpelling.map(b => ({
+                    word: b.british, definition: b.american,
+                    id: 'bs_' + b.british.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+                    category: 'spelling', british: b.british, american: b.american
+                }));
+                let all = [...vocabItems, ...spellingItems];
+                if (cat === 'vocab') all = vocabItems;
+                else if (cat === 'spelling') all = spellingItems;
+                return shuffleArray(all);
+            }
+
+            if (currentSection === 'avsb') {
+                return shuffleArray(Object.keys(aVsBComparisons).map(key => {
+                    const comp = aVsBComparisons[key];
+                    return {
+                        word: comp.title, id: 'avsb_' + key,
+                        definition: comp.rows.map(r => r[0]).join(', '),
+                        category: 'avsb', compKey: key
+                    };
+                }));
+            }
+
+            return getWords();
         }
 
         function shuffleArray(array) {
@@ -3220,7 +3763,12 @@
             currentMode = mode;
             currentCategory = document.getElementById('categoryFilter').value;
             try {
-                let pool = selectWordsForGame(50);
+                let pool;
+                if (currentSection === 'vocabulary') {
+                    pool = selectWordsForGame(50);
+                } else {
+                    pool = getSectionWords();
+                }
                 if (mode === 'synonym') {
                     pool = pool.filter(w => wordSynonyms[w.word]);
                 } else if (mode === 'opposite') {
@@ -3229,8 +3777,8 @@
                 currentWords = pool.slice(0, 10);
                 if (currentWords.length === 0) throw new Error('No words available for this mode');
             } catch (err) {
-                console.warn('Weighted selection failed, using random:', err);
-                let fallback = getWords();
+                console.warn('Selection failed, using fallback:', err);
+                let fallback = getSectionWords();
                 if (mode === 'synonym') fallback = fallback.filter(w => wordSynonyms[w.word]);
                 else if (mode === 'opposite') fallback = fallback.filter(w => wordAntonyms[w.word]);
                 currentWords = fallback.slice(0, 10);
@@ -3256,6 +3804,81 @@
             const gameArea = document.getElementById('gameArea');
             gameArea.classList.remove('active');
             gameArea.classList.remove('showing-results');
+        }
+
+        function switchSection() {
+            currentSection = document.getElementById('sectionFilter').value;
+            updateCategoryDropdown();
+            updateGameModes();
+        }
+
+        function updateCategoryDropdown() {
+            const dropdown = document.getElementById('categoryFilter');
+            const filterGroup = dropdown.closest('.filter-group');
+
+            if (currentSection === 'vocabulary') {
+                filterGroup.style.display = 'block';
+                dropdown.innerHTML = `
+                    <option value="all">All Categories</option>
+                    <option value="positive">Positive Words</option>
+                    <option value="negative">Negative Words</option>
+                    <option value="descriptive">Descriptive Words</option>
+                    <option value="abstract">Abstract Concepts</option>
+                    <option value="actions">Action Verbs</option>
+                    <option value="everyday">Everyday Words</option>
+                    <option value="formal">Formal Language</option>
+                    <option value="literary">Literary Devices</option>
+                    <option value="science">Science &amp; Tech</option>
+                    <option value="finance">Finance &amp; Business</option>
+                    <option value="legal">Legal Terms</option>
+                    <option value="medical">Medical Terms</option>
+                    <option value="emotions">Emotions</option>
+                    <option value="academic">Academic</option>
+                    <option value="miscellaneous">Miscellaneous</option>
+                `;
+            } else if (currentSection === 'britam') {
+                filterGroup.style.display = 'block';
+                dropdown.innerHTML = `
+                    <option value="all">All</option>
+                    <option value="vocab">Vocabulary Differences</option>
+                    <option value="spelling">Spelling Differences</option>
+                `;
+            } else if (currentSection === 'sayings') {
+                filterGroup.style.display = 'block';
+                dropdown.innerHTML = `
+                    <option value="all">All Origins</option>
+                    <option value="British">British</option>
+                    <option value="Nautical">Nautical</option>
+                    <option value="Biblical">Biblical</option>
+                    <option value="other">Other</option>
+                `;
+            } else {
+                // latin, avsb - no categories
+                filterGroup.style.display = 'none';
+            }
+        }
+
+        function updateGameModes() {
+            const modeCards = document.querySelectorAll('.game-mode-card');
+            modeCards.forEach(card => {
+                const mode = card.getAttribute('data-mode');
+                card.style.display = 'block';
+
+                if (currentSection === 'latin') {
+                    if (['fillblank', 'synonym', 'opposite', 'britam', 'amtobrit'].includes(mode)) card.style.display = 'none';
+                } else if (currentSection === 'sayings') {
+                    if (['fillblank', 'synonym', 'opposite', 'britam', 'amtobrit'].includes(mode)) card.style.display = 'none';
+                } else if (currentSection === 'britam') {
+                    if (['fillblank', 'synonym', 'opposite', 'definition'].includes(mode)) card.style.display = 'none';
+                    // Show britam and amtobrit modes
+                } else if (currentSection === 'avsb') {
+                    // Only flashcard for A vs B
+                    if (mode !== 'flashcard') card.style.display = 'none';
+                } else {
+                    // vocabulary - show all except britam/amtobrit
+                    if (['britam', 'amtobrit'].includes(mode)) card.style.display = 'none';
+                }
+            });
         }
 
         function updateProgress() {
@@ -3311,21 +3934,74 @@
                 case 'opposite':
                     renderOpposite(content, currentWord);
                     break;
+                case 'britam':
+                    renderBritToAmerican(content, currentWord);
+                    break;
+                case 'amtobrit':
+                    renderAmericanToBrit(content, currentWord);
+                    break;
                 case 'mixed':
-                    const modes = ['multiple', 'fillblank', 'definition'];
-                    if (wordSynonyms[currentWord.word]) modes.push('synonym');
-                    if (wordAntonyms[currentWord.word]) modes.push('opposite');
-                    const randomMode = modes[Math.floor(Math.random() * modes.length)];
-                    if (randomMode === 'multiple') renderMultipleChoice(content, currentWord);
-                    else if (randomMode === 'fillblank') renderFillBlank(content, currentWord);
-                    else if (randomMode === 'synonym') renderSynonym(content, currentWord);
-                    else if (randomMode === 'opposite') renderOpposite(content, currentWord);
+                    let mixedModes = [];
+                    if (currentSection === 'vocabulary') {
+                        mixedModes = ['multiple', 'fillblank', 'definition'];
+                        if (wordSynonyms[currentWord.word]) mixedModes.push('synonym');
+                        if (wordAntonyms[currentWord.word]) mixedModes.push('opposite');
+                    } else if (currentSection === 'britam') {
+                        mixedModes = ['britam', 'amtobrit', 'multiple'];
+                    } else {
+                        mixedModes = ['multiple', 'definition'];
+                    }
+                    const mixedMode = mixedModes[Math.floor(Math.random() * mixedModes.length)];
+                    if (mixedMode === 'multiple') renderMultipleChoice(content, currentWord);
+                    else if (mixedMode === 'fillblank') renderFillBlank(content, currentWord);
+                    else if (mixedMode === 'synonym') renderSynonym(content, currentWord);
+                    else if (mixedMode === 'opposite') renderOpposite(content, currentWord);
+                    else if (mixedMode === 'britam') renderBritToAmerican(content, currentWord);
+                    else if (mixedMode === 'amtobrit') renderAmericanToBrit(content, currentWord);
                     else renderDefinitionMatch(content, currentWord);
                     break;
             }
         }
 
         function renderFlashcard(content, word) {
+            if (currentSection === 'avsb' && word.compKey) {
+                const comp = aVsBComparisons[word.compKey];
+                const tableRows = comp.rows.map(row =>
+                    `<tr>${row.map(cell => `<td style="padding: 8px 12px; border-bottom: 1px solid var(--glass-border); color: var(--text); font-size: 0.85em;">${cell}</td>`).join('')}</tr>`
+                ).join('');
+                const headerCells = comp.headers.map(h =>
+                    `<th style="padding: 8px 12px; border-bottom: 2px solid var(--gold); color: var(--gold); font-size: 0.85em; text-align: left;">${h}</th>`
+                ).join('');
+
+                content.innerHTML = `
+                    <div class="question-card">
+                        <h2 style="text-align: center; margin-bottom: 20px;">Click the card to flip</h2>
+                        <div class="flip-card">
+                            <div class="flip-card-inner" id="flipCard" onclick="this.classList.toggle('flipped')">
+                                <div class="flip-card-front">
+                                    <div class="word-display">${comp.title}</div>
+                                    <p style="color: var(--text-muted); margin-top: 10px;">Tap to see comparison</p>
+                                </div>
+                                <div class="flip-card-back">
+                                    <div style="overflow-x: auto; width: 100%;">
+                                        <table style="width: 100%; border-collapse: collapse;">
+                                            <thead><tr>${headerCells}</tr></thead>
+                                            <tbody>${tableRows}</tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+                            <button class="next-button" onclick="moveToNext(true)">Got it</button>
+                            <button class="submit-button" onclick="moveToNext(false)" style="background: var(--rose); margin-left: 10px;">Need to review</button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Original flashcard for other sections
             content.innerHTML = `
                 <div class="question-card">
                     <h2 style="text-align: center; margin-bottom: 20px;">Click the card to flip</h2>
@@ -3333,16 +4009,18 @@
                         <div class="flip-card-inner" id="flipCard" onclick="this.classList.toggle('flipped')">
                             <div class="flip-card-front">
                                 <div class="word-display">${word.word}</div>
+                                ${word.pronunciation ? `<p class="pronunciation">${word.pronunciation}</p>` : ''}
                             </div>
                             <div class="flip-card-back">
                                 <div style="text-align: center;">
-                                    <p style="font-size: 1.2em; margin-bottom: 10px;">${word.definition}</p>
-                                    <p class="pronunciation">${word.pronunciation}</p>
+                                    <p style="font-size: 1.2em; color: var(--text);">${word.definition}</p>
+                                    ${word.origin ? `<p style="margin-top: 10px; color: var(--text-muted); font-size: 0.9em;">Origin: ${word.origin}</p>` : ''}
+                                    ${word.note ? `<p style="margin-top: 10px; color: var(--text-muted); font-size: 0.9em;">${word.note}</p>` : ''}
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div style="text-align: center; margin-top: 30px;">
+                    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
                         <button class="next-button" onclick="moveToNext(true)">I know this</button>
                         <button class="submit-button" onclick="moveToNext(false)" style="background: var(--rose); margin-left: 10px;">Need to review</button>
                     </div>
@@ -3467,9 +4145,50 @@
             `;
         }
 
+        function renderBritToAmerican(content, word) {
+            const allPairs = [...britVsAmericanVocab, ...britVsAmericanSpelling];
+            const wrongOptions = shuffleArray(allPairs.filter(p => p.american !== word.american)).slice(0, 3).map(p => p.american);
+            const allOptions = shuffleArray([word.american, ...wrongOptions]);
+            const correctIdx = allOptions.indexOf(word.american);
+
+            content.innerHTML = `
+                <div class="question-card">
+                    <div class="question">What is the American English for:</div>
+                    <div class="word-display">${word.british}</div>
+                    <div class="options">
+                        ${allOptions.map((opt, idx) => `
+                            <button class="option-button" onclick="checkAnswer(${idx}, ${correctIdx})">${opt}</button>
+                        `).join('')}
+                    </div>
+                    <div class="feedback" id="feedback"></div>
+                </div>
+            `;
+        }
+
+        function renderAmericanToBrit(content, word) {
+            const allPairs = [...britVsAmericanVocab, ...britVsAmericanSpelling];
+            const wrongOptions = shuffleArray(allPairs.filter(p => p.british !== word.british)).slice(0, 3).map(p => p.british);
+            const allOptions = shuffleArray([word.british, ...wrongOptions]);
+            const correctIdx = allOptions.indexOf(word.british);
+
+            content.innerHTML = `
+                <div class="question-card">
+                    <div class="question">What is the British English for:</div>
+                    <div class="word-display">${word.american}</div>
+                    <div class="options">
+                        ${allOptions.map((opt, idx) => `
+                            <button class="option-button" onclick="checkAnswer(${idx}, ${correctIdx})">${opt}</button>
+                        `).join('')}
+                    </div>
+                    <div class="feedback" id="feedback"></div>
+                </div>
+            `;
+        }
+
         function getRandomWords(count, excludeWord) {
-            const source = allWordsFlat.length > 0 ? allWordsFlat :
-                Object.keys(vocabulary).reduce((acc, cat) => acc.concat(vocabulary[cat]), []);
+            const source = currentSection === 'vocabulary' ?
+                (allWordsFlat.length > 0 ? allWordsFlat : Object.keys(vocabulary).reduce((acc, cat) => acc.concat(vocabulary[cat]), [])) :
+                getSectionWords();
             return shuffleArray(source.filter(w => w.word !== excludeWord)).slice(0, count);
         }
 
@@ -3746,6 +4465,7 @@
         }
 
         updateStats();
+        updateGameModes();
     </script>
 </body>
 </html>
