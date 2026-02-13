@@ -1195,8 +1195,10 @@
             height: 100%;
             backface-visibility: hidden;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            overflow-y: auto;
             border-radius: 16px;
             border: 2px solid var(--gold);
             background: linear-gradient(135deg, var(--glass-light) 0%, rgba(240, 194, 127, 0.05) 100%);
@@ -1205,6 +1207,7 @@
 
         .flip-card-back {
             transform: rotateY(180deg);
+            align-items: flex-start;
             background: linear-gradient(135deg, rgba(232, 133, 110, 0.05) 0%, var(--glass-light) 100%);
         }
 
@@ -1669,6 +1672,118 @@
             font-style: normal;
         }
 
+        .detail-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .detail-tag {
+            font-size: 0.8em;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: var(--glass-light);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+        }
+
+        .detail-tag.pos {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .detail-tag.tone {
+            border-color: var(--coral);
+            color: var(--coral);
+        }
+
+        .detail-etymology {
+            font-style: italic;
+            color: var(--text-muted);
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .detail-examples-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .detail-examples-list li {
+            font-size: 0.9em;
+            color: var(--text);
+            line-height: 1.5;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .detail-examples-list li:last-child {
+            border-bottom: none;
+        }
+
+        .detail-examples-list li::before {
+            content: '\201C';
+            color: var(--gold);
+            font-size: 1.2em;
+            margin-right: 2px;
+        }
+
+        .detail-examples-list li::after {
+            content: '\201D';
+            color: var(--gold);
+            font-size: 1.2em;
+            margin-left: 2px;
+        }
+
+        .detail-mnemonic {
+            background: linear-gradient(135deg, rgba(240, 194, 127, 0.08), rgba(240, 194, 127, 0.03));
+            border-left: 3px solid var(--gold);
+            padding: 10px 14px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9em;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .enriched-back {
+            text-align: left;
+            padding: 16px 20px;
+            overflow-y: auto;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .enriched-back .eb-definition {
+            font-size: 0.95em;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+
+        .enriched-back .eb-label {
+            font-size: 0.65em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--coral);
+            margin-top: 2px;
+        }
+
+        .enriched-back .eb-value {
+            font-size: 0.8em;
+            color: var(--text-muted);
+        }
+
+        .enriched-back .eb-example {
+            font-size: 0.8em;
+            color: var(--text);
+            font-style: italic;
+        }
+
         .tap-hint {
             display: block;
             text-align: center;
@@ -1953,6 +2068,7 @@
     </div>
 
     <!-- FIREBASE & GAME LOGIC -->
+    <script src="word_details.js"></script>
     <script>
         // ============================================
         // FIREBASE AUTHENTICATION
@@ -4001,7 +4117,72 @@ const aVsBComparisons = {
                 return;
             }
 
-            // Original flashcard for other sections
+            // Enriched flashcard for all non-avsb sections
+            let enrichedBack = '';
+            if (currentSection === 'vocabulary') {
+                const d = (typeof wordDetails !== 'undefined') ? wordDetails[word.word] : null;
+                if (d) {
+                    enrichedBack = `
+                        <div class="enriched-back">
+                            <div class="eb-definition">${word.definition}</div>
+                            ${d.partOfSpeech ? `<div class="eb-label">Part of Speech</div><div class="eb-value">${d.partOfSpeech}</div>` : ''}
+                            ${d.etymology ? `<div class="eb-label">Origin</div><div class="eb-value">${d.etymology}</div>` : ''}
+                            ${d.rhymesWith && d.rhymesWith.length ? `<div class="eb-label">Rhymes with</div><div class="eb-value">${d.rhymesWith.join(', ')}</div>` : ''}
+                            ${d.examples && d.examples.length ? `<div class="eb-label">Example</div><div class="eb-example">${d.examples[0]}</div>` : ''}
+                            ${d.usageNote ? `<div class="eb-label">Tip</div><div class="eb-value">${d.usageNote}</div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    enrichedBack = `<div style="text-align: center;"><p style="font-size: 1.2em; color: var(--text);">${word.definition}</p></div>`;
+                }
+            } else if (currentSection === 'latin') {
+                const d = (typeof latinDetails !== 'undefined') ? latinDetails[word.word] : null;
+                if (d) {
+                    enrichedBack = `
+                        <div class="enriched-back">
+                            <div class="eb-definition">${word.definition}</div>
+                            ${d.literalTranslation ? `<div class="eb-label">Literal Translation</div><div class="eb-value">${d.literalTranslation}</div>` : ''}
+                            ${d.usageContext ? `<div class="eb-label">Used in</div><div class="eb-value">${d.usageContext}</div>` : ''}
+                            ${d.examples && d.examples.length ? `<div class="eb-label">Example</div><div class="eb-example">${d.examples[0]}</div>` : ''}
+                            ${d.relatedTerms && d.relatedTerms.length ? `<div class="eb-label">Related</div><div class="eb-value">${d.relatedTerms.join(', ')}</div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    enrichedBack = `<div style="text-align: center;"><p style="font-size: 1.2em; color: var(--text);">${word.definition}</p></div>`;
+                }
+            } else if (currentSection === 'sayings') {
+                const d = (typeof sayingsDetails !== 'undefined') ? sayingsDetails[word.word] : null;
+                if (d) {
+                    enrichedBack = `
+                        <div class="enriched-back">
+                            <div class="eb-definition">${word.definition}</div>
+                            ${d.literalMeaning ? `<div class="eb-label">Literal Meaning</div><div class="eb-value">${d.literalMeaning}</div>` : ''}
+                            ${d.originStory ? `<div class="eb-label">Origin</div><div class="eb-value">${d.originStory}</div>` : ''}
+                            ${d.tone ? `<div class="eb-label">Tone</div><div class="eb-value">${d.tone}</div>` : ''}
+                            ${d.similarExpressions && d.similarExpressions.length ? `<div class="eb-label">Similar</div><div class="eb-value">${d.similarExpressions.join(', ')}</div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    enrichedBack = `<div style="text-align: center;"><p style="font-size: 1.2em; color: var(--text);">${word.definition}</p></div>`;
+                }
+            } else if (currentSection === 'britam') {
+                const d = (typeof britamDetails !== 'undefined') ? britamDetails[word.word] : null;
+                if (d) {
+                    enrichedBack = `
+                        <div class="enriched-back">
+                            <div class="eb-definition">${word.british} = ${word.american}</div>
+                            ${d.britishExample ? `<div class="eb-label">British Usage</div><div class="eb-example">${d.britishExample}</div>` : ''}
+                            ${d.americanExample ? `<div class="eb-label">American Usage</div><div class="eb-example">${d.americanExample}</div>` : ''}
+                            ${d.funFact ? `<div class="eb-label">Fun Fact</div><div class="eb-value">${d.funFact}</div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    enrichedBack = `<div style="text-align: center;"><p style="font-size: 1.2em; color: var(--text);">${word.definition}</p>${word.note ? `<p style="margin-top:10px;color:var(--text-muted);font-size:0.9em;">${word.note}</p>` : ''}</div>`;
+                }
+            } else {
+                enrichedBack = `<div style="text-align: center;"><p style="font-size: 1.2em; color: var(--text);">${word.definition}</p></div>`;
+            }
+
             content.innerHTML = `
                 <div class="question-card">
                     <h2 style="text-align: center; margin-bottom: 20px;">Click the card to flip</h2>
@@ -4012,11 +4193,7 @@ const aVsBComparisons = {
                                 ${word.pronunciation ? `<p class="pronunciation">${word.pronunciation}</p>` : ''}
                             </div>
                             <div class="flip-card-back">
-                                <div style="text-align: center;">
-                                    <p style="font-size: 1.2em; color: var(--text);">${word.definition}</p>
-                                    ${word.origin ? `<p style="margin-top: 10px; color: var(--text-muted); font-size: 0.9em;">Origin: ${word.origin}</p>` : ''}
-                                    ${word.note ? `<p style="margin-top: 10px; color: var(--text-muted); font-size: 0.9em;">${word.note}</p>` : ''}
-                                </div>
+                                ${enrichedBack}
                             </div>
                         </div>
                     </div>
@@ -4377,7 +4554,6 @@ const aVsBComparisons = {
             const word = currentWords[wordIndex];
             if (!word) return;
 
-            const example = generateExampleSentence(word);
             const progress = userProgressCache[word.id];
             let statsHtml = '';
             if (progress && progress.attempts > 0) {
@@ -4392,6 +4568,220 @@ const aVsBComparisons = {
                 `;
             }
 
+            let enrichedHtml = '';
+
+            if (currentSection === 'vocabulary') {
+                const d = (typeof wordDetails !== 'undefined') ? wordDetails[word.word] : null;
+                const fallbackExample = generateExampleSentence(word);
+                enrichedHtml = `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Definition</div>
+                        <div class="detail-definition">${word.definition}</div>
+                        ${d && d.partOfSpeech ? `<div class="detail-tags" style="margin-top:8px"><span class="detail-tag pos">${d.partOfSpeech}</span></div>` : ''}
+                    </div>
+
+                    <div class="detail-section">
+                        <div class="detail-section-label">Pronunciation</div>
+                        <div class="detail-pronunciation-row">
+                            <span class="detail-pronunciation-text">${d && d.britishPronunciation ? d.britishPronunciation : word.pronunciation}</span>
+                            <button class="pronounce-btn" onclick="pronounceWord('${word.word.replace(/'/g, "\\'")}')">
+                                Listen
+                            </button>
+                        </div>
+                        ${d && d.rhymesWith && d.rhymesWith.length ? `<div style="margin-top: 6px; font-size: 0.85em; color: var(--text-muted);">Rhymes with: ${d.rhymesWith.join(', ')}</div>` : ''}
+                    </div>
+
+                    ${d && d.etymology ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Etymology</div>
+                        <div class="detail-etymology">${d.etymology}</div>
+                    </div>
+                    ` : ''}
+
+                    <div class="detail-section">
+                        <div class="detail-section-label">Examples</div>
+                        <ul class="detail-examples-list">
+                            ${d && d.examples && d.examples.length ? d.examples.map(ex => `<li>${ex}</li>`).join('') : `<li>${fallbackExample}</li>`}
+                        </ul>
+                    </div>
+
+                    ${d && d.synonyms && d.synonyms.length ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Synonyms</div>
+                        <div class="detail-tags">${d.synonyms.map(s => `<span class="detail-tag">${s}</span>`).join('')}</div>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.antonyms && d.antonyms.length ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Antonyms</div>
+                        <div class="detail-tags">${d.antonyms.map(a => `<span class="detail-tag">${a}</span>`).join('')}</div>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.wordFamily && d.wordFamily.length ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Word Family</div>
+                        <div class="detail-tags">${d.wordFamily.map(w => `<span class="detail-tag">${w}</span>`).join('')}</div>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.usageNote ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Usage Tip</div>
+                        <div class="detail-mnemonic">${d.usageNote}</div>
+                    </div>
+                    ` : ''}
+
+                    ${statsHtml}
+                `;
+            } else if (currentSection === 'latin') {
+                const d = (typeof latinDetails !== 'undefined') ? latinDetails[word.word] : null;
+                enrichedHtml = `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Definition</div>
+                        <div class="detail-definition">${word.definition}</div>
+                    </div>
+
+                    ${d && d.literalTranslation ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Literal Translation</div>
+                        <div class="detail-etymology">${d.literalTranslation}</div>
+                    </div>
+                    ` : ''}
+
+                    <div class="detail-section">
+                        <div class="detail-section-label">Pronunciation</div>
+                        <div class="detail-pronunciation-row">
+                            <span class="detail-pronunciation-text">${d && d.britishPronunciation ? d.britishPronunciation : (word.pronunciation || '')}</span>
+                            <button class="pronounce-btn" onclick="pronounceWord('${word.word.replace(/'/g, "\\'")}')">Listen</button>
+                        </div>
+                    </div>
+
+                    ${d && d.usageContext ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Commonly Used In</div>
+                        <div style="color: var(--text-muted); font-size: 0.9em;">${d.usageContext}</div>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.examples && d.examples.length ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Examples</div>
+                        <ul class="detail-examples-list">${d.examples.map(ex => `<li>${ex}</li>`).join('')}</ul>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.relatedTerms && d.relatedTerms.length ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Related Terms</div>
+                        <div class="detail-tags">${d.relatedTerms.map(t => `<span class="detail-tag">${t}</span>`).join('')}</div>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.commonMisuse ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Did You Know?</div>
+                        <div class="detail-mnemonic">${d.commonMisuse}</div>
+                    </div>
+                    ` : ''}
+
+                    ${statsHtml}
+                `;
+            } else if (currentSection === 'sayings') {
+                const d = (typeof sayingsDetails !== 'undefined') ? sayingsDetails[word.word] : null;
+                enrichedHtml = `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Meaning</div>
+                        <div class="detail-definition">${word.definition}</div>
+                        ${d && d.tone ? `<div class="detail-tags" style="margin-top:8px"><span class="detail-tag tone">${d.tone}</span></div>` : ''}
+                    </div>
+
+                    ${d && d.literalMeaning ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Literal Meaning</div>
+                        <div class="detail-etymology">${d.literalMeaning}</div>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.originStory ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Origin Story</div>
+                        <div style="color: var(--text); font-size: 0.9em; line-height: 1.6;">${d.originStory}</div>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.examples && d.examples.length ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Examples</div>
+                        <ul class="detail-examples-list">${d.examples.map(ex => `<li>${ex}</li>`).join('')}</ul>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.similarExpressions && d.similarExpressions.length ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Similar Expressions</div>
+                        <div class="detail-tags">${d.similarExpressions.map(s => `<span class="detail-tag">${s}</span>`).join('')}</div>
+                    </div>
+                    ` : ''}
+
+                    ${statsHtml}
+                `;
+            } else if (currentSection === 'britam') {
+                const d = (typeof britamDetails !== 'undefined') ? britamDetails[word.word] : null;
+                enrichedHtml = `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Translation</div>
+                        <div class="detail-definition"><span style="color:var(--gold)">${word.british || word.word}</span> = <span style="color:var(--coral)">${word.american || word.definition}</span></div>
+                        ${d && d.confusionRisk ? `<div class="detail-tags" style="margin-top:8px"><span class="detail-tag ${d.confusionRisk === 'high' ? 'tone' : ''}">${d.confusionRisk} confusion risk</span></div>` : ''}
+                    </div>
+
+                    ${d && d.britishExample ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">British Usage</div>
+                        <ul class="detail-examples-list"><li>${d.britishExample}</li></ul>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.americanExample ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">American Usage</div>
+                        <ul class="detail-examples-list"><li>${d.americanExample}</li></ul>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.etymology ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Why They Differ</div>
+                        <div class="detail-etymology">${d.etymology}</div>
+                    </div>
+                    ` : ''}
+
+                    ${d && d.funFact ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Fun Fact</div>
+                        <div class="detail-mnemonic">${d.funFact}</div>
+                    </div>
+                    ` : ''}
+
+                    ${statsHtml}
+                `;
+            } else {
+                // Fallback (avsb or unknown)
+                const fallbackExample = generateExampleSentence(word);
+                enrichedHtml = `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Definition</div>
+                        <div class="detail-definition">${word.definition}</div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-label">Example</div>
+                        <div class="detail-example">${fallbackExample}</div>
+                    </div>
+                    ${statsHtml}
+                `;
+            }
+
             const overlay = document.createElement('div');
             overlay.className = 'word-detail-overlay';
             overlay.onclick = function(e) {
@@ -4401,29 +4791,8 @@ const aVsBComparisons = {
                 <div class="word-detail-card">
                     <button class="word-detail-close" onclick="hideWordDetail()">&times;</button>
                     <div class="detail-word-name">${word.word}</div>
-                    <div class="detail-category">${word.category}</div>
-
-                    <div class="detail-section">
-                        <div class="detail-section-label">Definition</div>
-                        <div class="detail-definition">${word.definition}</div>
-                    </div>
-
-                    <div class="detail-section">
-                        <div class="detail-section-label">Pronunciation</div>
-                        <div class="detail-pronunciation-row">
-                            <span class="detail-pronunciation-text">${word.pronunciation}</span>
-                            <button class="pronounce-btn" onclick="pronounceWord('${word.word}')">
-                                Listen
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="detail-section">
-                        <div class="detail-section-label">Example</div>
-                        <div class="detail-example">${example}</div>
-                    </div>
-
-                    ${statsHtml}
+                    <div class="detail-category">${word.category || currentSection}</div>
+                    ${enrichedHtml}
                 </div>
             `;
             document.body.appendChild(overlay);
