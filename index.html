@@ -1747,6 +1747,44 @@
             line-height: 1.5;
         }
 
+        .add-word-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--glass-light);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.95em;
+            outline: none;
+            transition: var(--transition);
+            box-sizing: border-box;
+        }
+
+        .add-word-input:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 2px rgba(240, 194, 127, 0.15);
+        }
+
+        .add-word-input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.6;
+        }
+
+        .add-word-field {
+            margin-bottom: 14px;
+        }
+
+        .add-word-field label {
+            display: block;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--coral);
+            margin-bottom: 6px;
+        }
+
         .enriched-back {
             text-align: left;
             padding: 16px 20px;
@@ -2024,10 +2062,15 @@
                     </div>
                 </div>
 
-                <!-- My Words Button -->
-                <button class="my-words-button" onclick="showMyWords()">
-                    My Words
-                </button>
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 12px; margin-top: 30px;">
+                    <button class="my-words-button" style="margin-top: 0; flex: 1;" onclick="showMyWords()">
+                        My Words
+                    </button>
+                    <button class="my-words-button" style="margin-top: 0; flex: 1; color: var(--coral); border-color: rgba(232,133,110,0.2);" onclick="showAddWord()">
+                        + Add Word
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -2045,6 +2088,37 @@
                 </div>
             </div>
             <div id="myWordsList"></div>
+        </div>
+
+        <!-- Add Word Modal -->
+        <div id="addWordOverlay" class="word-detail-overlay" style="display:none;" onclick="if(event.target===this)hideAddWord()">
+            <div class="word-detail-card" style="max-width: 520px;">
+                <button class="word-detail-close" onclick="hideAddWord()">&times;</button>
+                <div class="detail-word-name" style="font-size: 1.5em; margin-bottom: 16px;">Add a Word</div>
+
+                <div class="filter-group" style="margin-bottom: 16px;">
+                    <label>Section</label>
+                    <select id="addWordSection" onchange="updateAddWordForm()">
+                        <option value="vocabulary">Vocabulary</option>
+                        <option value="latin">Latin Term</option>
+                        <option value="sayings">Saying / Idiom</option>
+                        <option value="britam">British vs American</option>
+                    </select>
+                </div>
+
+                <div id="addWordFields">
+                    <!-- Dynamic fields populated by updateAddWordForm() -->
+                </div>
+
+                <div id="addWordLookupStatus" style="display:none; margin-bottom: 12px; padding: 10px; border-radius: 8px; font-size: 0.85em;"></div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="next-button" style="flex:1;" onclick="submitWord()" id="addWordSubmitBtn">Add Word</button>
+                    <button class="submit-button" style="flex:1; background: var(--glass-light); color: var(--text-muted);" onclick="hideAddWord()">Cancel</button>
+                </div>
+
+                <div id="addWordMessage" style="display:none; margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 0.85em; text-align: center;"></div>
+            </div>
         </div>
 
         <!-- Game Area -->
@@ -2265,6 +2339,9 @@
                 console.warn('Failed to load progress:', err);
                 userProgressCache = {};
             }
+
+            // Load community-added words
+            await loadCommunityWords();
 
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('gameContainer').classList.add('unlocked');
@@ -4807,6 +4884,261 @@ const aVsBComparisons = {
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') hideWordDetail();
         });
+
+        // ============================================
+        // ADD WORD FEATURE
+        // ============================================
+        function showAddWord() {
+            document.getElementById('addWordOverlay').style.display = 'flex';
+            updateAddWordForm();
+        }
+
+        function hideAddWord() {
+            document.getElementById('addWordOverlay').style.display = 'none';
+            document.getElementById('addWordMessage').style.display = 'none';
+        }
+
+        function updateAddWordForm() {
+            const section = document.getElementById('addWordSection').value;
+            const fields = document.getElementById('addWordFields');
+            const status = document.getElementById('addWordLookupStatus');
+            status.style.display = 'none';
+
+            if (section === 'vocabulary') {
+                fields.innerHTML = `
+                    <div class="add-word-field">
+                        <label>Word</label>
+                        <input type="text" class="add-word-input" id="addWord_word" placeholder="e.g. Perspicacious" oninput="debounceLookup()">
+                    </div>
+                    <div class="add-word-field">
+                        <label>Definition <span style="opacity:0.5">(auto-filled if found)</span></label>
+                        <input type="text" class="add-word-input" id="addWord_definition" placeholder="Will auto-fill from dictionary...">
+                    </div>
+                    <div class="add-word-field">
+                        <label>Category</label>
+                        <select class="add-word-input" id="addWord_category">
+                            <option value="positive">Positive Words</option>
+                            <option value="negative">Negative Words</option>
+                            <option value="descriptive">Descriptive Words</option>
+                            <option value="abstract">Abstract Concepts</option>
+                            <option value="actions">Action Verbs</option>
+                            <option value="everyday">Everyday Words</option>
+                            <option value="formal">Formal Language</option>
+                            <option value="literary">Literary Devices</option>
+                            <option value="science">Science & Tech</option>
+                            <option value="finance">Finance & Business</option>
+                            <option value="legal">Legal Terms</option>
+                            <option value="medical">Medical Terms</option>
+                            <option value="emotions">Emotions</option>
+                            <option value="academic">Academic</option>
+                            <option value="uncategorised">Uncategorised</option>
+                        </select>
+                    </div>
+                `;
+            } else if (section === 'latin') {
+                fields.innerHTML = `
+                    <div class="add-word-field">
+                        <label>Latin Term</label>
+                        <input type="text" class="add-word-input" id="addWord_word" placeholder="e.g. Memento mori">
+                    </div>
+                    <div class="add-word-field">
+                        <label>Definition / Meaning</label>
+                        <input type="text" class="add-word-input" id="addWord_definition" placeholder="e.g. Remember that you will die">
+                    </div>
+                    <div class="add-word-field">
+                        <label>Pronunciation <span style="opacity:0.5">(optional)</span></label>
+                        <input type="text" class="add-word-input" id="addWord_pronunciation" placeholder="e.g. meh-MEN-toh MOR-ee">
+                    </div>
+                `;
+            } else if (section === 'sayings') {
+                fields.innerHTML = `
+                    <div class="add-word-field">
+                        <label>Saying / Idiom</label>
+                        <input type="text" class="add-word-input" id="addWord_word" placeholder="e.g. The bee's knees">
+                    </div>
+                    <div class="add-word-field">
+                        <label>Meaning</label>
+                        <input type="text" class="add-word-input" id="addWord_definition" placeholder="e.g. An excellent person or thing">
+                    </div>
+                    <div class="add-word-field">
+                        <label>Origin</label>
+                        <select class="add-word-input" id="addWord_origin">
+                            <option value="British">British</option>
+                            <option value="Nautical">Nautical</option>
+                            <option value="Biblical">Biblical</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                `;
+            } else if (section === 'britam') {
+                fields.innerHTML = `
+                    <div class="add-word-field">
+                        <label>British English</label>
+                        <input type="text" class="add-word-input" id="addWord_british" placeholder="e.g. Lorry">
+                    </div>
+                    <div class="add-word-field">
+                        <label>American English</label>
+                        <input type="text" class="add-word-input" id="addWord_american" placeholder="e.g. Truck">
+                    </div>
+                    <div class="add-word-field">
+                        <label>Note <span style="opacity:0.5">(optional)</span></label>
+                        <input type="text" class="add-word-input" id="addWord_note" placeholder="e.g. Both used in everyday speech">
+                    </div>
+                `;
+            }
+        }
+
+        let lookupTimer = null;
+        function debounceLookup() {
+            if (lookupTimer) clearTimeout(lookupTimer);
+            lookupTimer = setTimeout(lookupWord, 600);
+        }
+
+        async function lookupWord() {
+            const wordInput = document.getElementById('addWord_word');
+            const defInput = document.getElementById('addWord_definition');
+            const status = document.getElementById('addWordLookupStatus');
+            const word = wordInput ? wordInput.value.trim() : '';
+            if (!word || word.length < 2) { status.style.display = 'none'; return; }
+
+            status.style.display = 'block';
+            status.style.background = 'var(--glass-light)';
+            status.style.color = 'var(--text-muted)';
+            status.textContent = 'Looking up "' + word + '"...';
+
+            try {
+                const resp = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word.toLowerCase()));
+                if (!resp.ok) throw new Error('Not found');
+                const data = await resp.json();
+                const entry = data[0];
+                const meanings = entry.meanings || [];
+                let def = '';
+                let pronunciation = '';
+                if (meanings.length > 0 && meanings[0].definitions && meanings[0].definitions.length > 0) {
+                    def = meanings[0].definitions[0].definition;
+                }
+                if (entry.phonetics) {
+                    const ph = entry.phonetics.find(p => p.text) || {};
+                    pronunciation = ph.text || '';
+                }
+                if (def && defInput && !defInput.value.trim()) {
+                    defInput.value = def;
+                }
+                status.style.background = 'rgba(76, 175, 80, 0.1)';
+                status.style.color = 'var(--green)';
+                status.textContent = 'Found! Definition auto-filled.' + (pronunciation ? ' Pronunciation: ' + pronunciation : '');
+            } catch (e) {
+                status.style.background = 'rgba(232, 133, 110, 0.1)';
+                status.style.color = 'var(--coral)';
+                status.textContent = 'Not found in dictionary — please enter the definition manually.';
+            }
+        }
+
+        async function submitWord() {
+            const section = document.getElementById('addWordSection').value;
+            const msgEl = document.getElementById('addWordMessage');
+            const btn = document.getElementById('addWordSubmitBtn');
+
+            let wordData = { section: section, addedBy: currentUserId, addedAt: firebase.firestore.FieldValue.serverTimestamp() };
+
+            if (section === 'vocabulary') {
+                const word = (document.getElementById('addWord_word').value || '').trim();
+                const def = (document.getElementById('addWord_definition').value || '').trim();
+                const cat = document.getElementById('addWord_category').value;
+                if (!word) { showAddMsg(msgEl, 'Please enter a word.', true); return; }
+                if (!def) { showAddMsg(msgEl, 'Please enter a definition.', true); return; }
+                wordData.word = word.charAt(0).toUpperCase() + word.slice(1);
+                wordData.definition = def;
+                wordData.category = cat;
+            } else if (section === 'latin') {
+                const word = (document.getElementById('addWord_word').value || '').trim();
+                const def = (document.getElementById('addWord_definition').value || '').trim();
+                const pron = (document.getElementById('addWord_pronunciation').value || '').trim();
+                if (!word) { showAddMsg(msgEl, 'Please enter a Latin term.', true); return; }
+                if (!def) { showAddMsg(msgEl, 'Please enter the meaning.', true); return; }
+                wordData.word = word;
+                wordData.definition = def;
+                if (pron) wordData.pronunciation = pron;
+            } else if (section === 'sayings') {
+                const word = (document.getElementById('addWord_word').value || '').trim();
+                const def = (document.getElementById('addWord_definition').value || '').trim();
+                const origin = document.getElementById('addWord_origin').value;
+                if (!word) { showAddMsg(msgEl, 'Please enter a saying.', true); return; }
+                if (!def) { showAddMsg(msgEl, 'Please enter the meaning.', true); return; }
+                wordData.word = word;
+                wordData.definition = def;
+                wordData.origin = origin;
+            } else if (section === 'britam') {
+                const brit = (document.getElementById('addWord_british').value || '').trim();
+                const amer = (document.getElementById('addWord_american').value || '').trim();
+                const note = (document.getElementById('addWord_note').value || '').trim();
+                if (!brit) { showAddMsg(msgEl, 'Please enter the British English word.', true); return; }
+                if (!amer) { showAddMsg(msgEl, 'Please enter the American English word.', true); return; }
+                wordData.word = brit;
+                wordData.british = brit;
+                wordData.american = amer;
+                wordData.definition = amer;
+                if (note) wordData.note = note;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
+
+            try {
+                await db.collection('communityWords').add(wordData);
+                // Also add to local in-memory data so it's immediately usable
+                addCommunityWordToLocal(wordData);
+                showAddMsg(msgEl, 'Added! "' + wordData.word + '" is now available.', false);
+                setTimeout(() => { hideAddWord(); btn.disabled = false; btn.textContent = 'Add Word'; }, 1500);
+            } catch (e) {
+                showAddMsg(msgEl, 'Error saving: ' + e.message, true);
+                btn.disabled = false;
+                btn.textContent = 'Add Word';
+            }
+        }
+
+        function showAddMsg(el, msg, isError) {
+            el.style.display = 'block';
+            el.style.background = isError ? 'rgba(232, 133, 110, 0.1)' : 'rgba(76, 175, 80, 0.1)';
+            el.style.color = isError ? 'var(--coral)' : 'var(--green)';
+            el.textContent = msg;
+        }
+
+        function addCommunityWordToLocal(data) {
+            const id = data.word.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') + '_community';
+            const wordObj = {
+                word: data.word,
+                definition: data.definition,
+                pronunciation: data.pronunciation || '',
+                id: id,
+                category: data.category || data.section,
+                community: true
+            };
+
+            if (data.section === 'vocabulary') {
+                if (!vocabulary['community']) vocabulary['community'] = [];
+                vocabulary['community'].push(wordObj);
+                allWordsFlat.push(wordObj);
+            } else if (data.section === 'latin') {
+                latinTerms.push({ word: data.word, definition: data.definition, pronunciation: data.pronunciation || '' });
+            } else if (data.section === 'sayings') {
+                sayingsIdioms.push({ word: data.word, definition: data.definition, origin: data.origin || 'Other' });
+            } else if (data.section === 'britam') {
+                britVsAmericanVocab.push({ british: data.british, american: data.american, note: data.note || '' });
+            }
+        }
+
+        async function loadCommunityWords() {
+            try {
+                const snapshot = await db.collection('communityWords').get();
+                snapshot.forEach(doc => {
+                    addCommunityWordToLocal(doc.data());
+                });
+                if (snapshot.size > 0) console.log('Loaded ' + snapshot.size + ' community words');
+            } catch (e) {
+                console.log('Could not load community words:', e.message);
+            }
+        }
 
         function showResults() {
             if (autoAdvanceTimeout) { clearTimeout(autoAdvanceTimeout); autoAdvanceTimeout = null; }
