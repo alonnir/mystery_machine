@@ -5085,11 +5085,29 @@ const aVsBComparisons = {
             btn.textContent = 'Adding...';
 
             try {
-                await db.collection('communityWords').add(wordData);
+                const docRef = await db.collection('communityWords').add(wordData);
                 // Also add to local in-memory data so it's immediately usable
                 addCommunityWordToLocal(wordData);
-                showAddMsg(msgEl, 'Added! "' + wordData.word + '" is now available.', false);
-                setTimeout(() => { hideAddWord(); btn.disabled = false; btn.textContent = 'Add Word'; }, 1500);
+                showAddMsg(msgEl, 'Added! Enriching with AI...', false);
+
+                // Enrich with Gemini in the background
+                if (typeof window.enrichWordWithAI === 'function') {
+                    try {
+                        const enriched = await window.enrichWordWithAI(wordData, docRef.id);
+                        if (enriched) {
+                            showAddMsg(msgEl, '"' + wordData.word + '" added and enriched!', false);
+                        } else {
+                            showAddMsg(msgEl, '"' + wordData.word + '" added! (enrichment will retry later)', false);
+                        }
+                    } catch (aiErr) {
+                        console.warn('AI enrichment error:', aiErr);
+                        showAddMsg(msgEl, '"' + wordData.word + '" added! (AI enrichment unavailable)', false);
+                    }
+                } else {
+                    showAddMsg(msgEl, '"' + wordData.word + '" added!', false);
+                }
+
+                setTimeout(() => { hideAddWord(); btn.disabled = false; btn.textContent = 'Add Word'; }, 2000);
             } catch (e) {
                 showAddMsg(msgEl, 'Error saving: ' + e.message, true);
                 btn.disabled = false;
@@ -5132,7 +5150,20 @@ const aVsBComparisons = {
             try {
                 const snapshot = await db.collection('communityWords').get();
                 snapshot.forEach(doc => {
-                    addCommunityWordToLocal(doc.data());
+                    const data = doc.data();
+                    addCommunityWordToLocal(data);
+                    // Load enriched data into detail objects if available
+                    if (data.enriched) {
+                        if (data.section === 'vocabulary' && typeof wordDetails !== 'undefined') {
+                            wordDetails[data.word] = data.enriched;
+                        } else if (data.section === 'latin' && typeof latinDetails !== 'undefined') {
+                            latinDetails[data.word] = data.enriched;
+                        } else if (data.section === 'sayings' && typeof sayingsDetails !== 'undefined') {
+                            sayingsDetails[data.word] = data.enriched;
+                        } else if (data.section === 'britam' && typeof britamDetails !== 'undefined') {
+                            britamDetails[data.word] = data.enriched;
+                        }
+                    }
                 });
                 if (snapshot.size > 0) console.log('Loaded ' + snapshot.size + ' community words');
             } catch (e) {
@@ -5167,6 +5198,109 @@ const aVsBComparisons = {
 
         updateStats();
         updateGameModes();
+    </script>
+
+    <!-- Firebase AI Logic (modular SDK) for Gemini enrichment -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js';
+        import { getAI, getGenerativeModel, GoogleAIBackend } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-ai.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBLOp3cKAm165jxQPTdtTfpX_pZnBeoWOM",
+            authDomain: "mystery-machine-e6dc9.firebaseapp.com",
+            projectId: "mystery-machine-e6dc9",
+            storageBucket: "mystery-machine-e6dc9.firebasestorage.app",
+            messagingSenderId: "707812554843",
+            appId: "1:707812554843:web:940ea1b2e0ef857615677e"
+        };
+
+        const modularApp = initializeApp(firebaseConfig, 'ai-enrichment');
+        const ai = getAI(modularApp, { backend: new GoogleAIBackend() });
+        const model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
+
+        window.enrichWordWithAI = async function(wordData, firestoreDocId) {
+            const section = wordData.section;
+            let prompt = '';
+
+            if (section === 'vocabulary') {
+                prompt = `You are a British English vocabulary expert. For the word "${wordData.word}" (definition: "${wordData.definition}"), provide the following in JSON format ONLY (no markdown, no code fences, just raw JSON):
+{
+  "partOfSpeech": "e.g. adjective",
+  "etymology": "Brief origin in 1 sentence",
+  "britishPronunciation": "British RP pronunciation guide e.g. AM-ih-kuh-buhl",
+  "rhymesWith": ["2-3 common words that rhyme, British pronunciation"],
+  "examples": ["3 example sentences using British English spelling and style"],
+  "synonyms": ["3-5 synonyms"],
+  "antonyms": ["2-3 antonyms, or empty array if none fit"],
+  "wordFamily": ["related word forms"],
+  "usageNote": "One sentence: memory trick, common context, or usage tip"
+}`;
+            } else if (section === 'latin') {
+                prompt = `You are a classics scholar. For the Latin term "${wordData.word}" (meaning: "${wordData.definition}"), provide the following in JSON format ONLY (no markdown, no code fences, just raw JSON):
+{
+  "literalTranslation": "Word-by-word literal translation",
+  "britishPronunciation": "British English pronunciation guide",
+  "usageContext": "Where this term is commonly used",
+  "examples": ["2-3 example sentences showing usage in British English"],
+  "relatedTerms": ["2-3 related Latin terms"],
+  "commonMisuse": "A common misunderstanding or interesting fact about this term"
+}`;
+            } else if (section === 'sayings') {
+                prompt = `You are a British English language expert. For the saying/idiom "${wordData.word}" (meaning: "${wordData.definition}"), provide the following in JSON format ONLY (no markdown, no code fences, just raw JSON):
+{
+  "literalMeaning": "What the words literally mean",
+  "originStory": "Brief origin story in 1-2 sentences",
+  "examples": ["2-3 example sentences in British English"],
+  "similarExpressions": ["2-3 similar sayings or idioms"],
+  "tone": "e.g. Formal, Informal, Humorous, etc."
+}`;
+            } else if (section === 'britam') {
+                prompt = `You are a British-American English expert. For the pair British: "${wordData.british}" / American: "${wordData.american}", provide the following in JSON format ONLY (no markdown, no code fences, just raw JSON):
+{
+  "britishExample": "Example sentence using the British word naturally",
+  "americanExample": "Example sentence using the American word naturally",
+  "etymology": "Brief explanation of why they differ",
+  "funFact": "An interesting fact about this difference",
+  "confusionRisk": "low, medium, or high"
+}`;
+            }
+
+            if (!prompt) return;
+
+            try {
+                const result = await model.generateContent(prompt);
+                const text = result.response.text();
+                // Parse JSON from response, stripping any markdown fences
+                const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+                const enriched = JSON.parse(cleaned);
+
+                // Save enriched data to Firestore
+                const db = firebase.firestore();
+                await db.collection('communityWords').doc(firestoreDocId).update({
+                    enriched: enriched,
+                    enrichedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Update local word_details data
+                if (section === 'vocabulary' && typeof wordDetails !== 'undefined') {
+                    wordDetails[wordData.word] = enriched;
+                } else if (section === 'latin' && typeof latinDetails !== 'undefined') {
+                    latinDetails[wordData.word] = enriched;
+                } else if (section === 'sayings' && typeof sayingsDetails !== 'undefined') {
+                    sayingsDetails[wordData.word] = enriched;
+                } else if (section === 'britam' && typeof britamDetails !== 'undefined') {
+                    britamDetails[wordData.word] = enriched;
+                }
+
+                console.log('Enriched "' + wordData.word + '" with AI data');
+                return enriched;
+            } catch (e) {
+                console.warn('AI enrichment failed for "' + wordData.word + '":', e.message);
+                return null;
+            }
+        };
+
+        console.log('Firebase AI Logic loaded');
     </script>
 </body>
 </html>
