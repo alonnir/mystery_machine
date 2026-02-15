@@ -1134,6 +1134,7 @@
             border-radius: 20px;
             padding: 50px 40px;
             animation: fadeUp 0.5s ease-out;
+            position: relative;
         }
 
         .question {
@@ -1783,6 +1784,78 @@
             letter-spacing: 1px;
             color: var(--coral);
             margin-bottom: 6px;
+        }
+
+        .word-action-buttons {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 4px;
+            z-index: 5;
+        }
+
+        .word-action-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--glass-light);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            padding: 0;
+        }
+
+        .word-action-btn:hover {
+            background: rgba(255,255,255,0.1);
+            transform: scale(1.1);
+        }
+
+        .word-action-btn svg {
+            width: 16px;
+            height: 16px;
+            transition: var(--transition);
+        }
+
+        .word-action-btn.star-btn svg {
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .word-action-btn.star-btn.active svg {
+            stroke: var(--gold);
+            fill: var(--gold);
+        }
+
+        .word-action-btn.upvote-btn svg {
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .word-action-btn.upvote-btn.active svg {
+            stroke: var(--green);
+            fill: var(--green);
+        }
+
+        .word-action-btn.downvote-btn svg {
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .word-action-btn.downvote-btn.active svg {
+            stroke: var(--coral);
+            fill: var(--coral);
+        }
+
+        .word-detail-card .word-action-buttons {
+            top: 16px;
+            right: 50px;
         }
 
         .enriched-back {
@@ -3742,7 +3815,33 @@ const aVsBComparisons = {
                 return a.word.localeCompare(b.word);
             });
 
-            container.innerHTML = encountered.map(w => {
+            // Starred section
+            const starredWords = allWordsFlat.filter(w => userProgressCache[w.id] && userProgressCache[w.id].starred);
+            let starredHtml = '';
+            if (starredWords.length > 0) {
+                starredHtml = `
+                    <div style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid var(--gold);">
+                        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin-bottom: 10px;">
+                            Starred (${starredWords.length})
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${starredWords.map(w => {
+                                const sp = userProgressCache[w.id] || {};
+                                const ratio = sp.attempts > 0 ? sp.correct / sp.attempts : 0;
+                                let color = 'var(--text-muted)';
+                                if (sp.attempts > 0) {
+                                    if (ratio >= 0.8) color = 'var(--green)';
+                                    else if (ratio >= 0.5) color = 'var(--gold)';
+                                    else color = 'var(--coral)';
+                                }
+                                return `<span style="padding: 4px 12px; border-radius: 20px; background: var(--glass-light); border: 1px solid var(--gold); color: ${color}; font-size: 0.85em; cursor: default;">${w.word}</span>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = starredHtml + encountered.map(w => {
                 const p = userProgressCache[w.id];
                 const correct = p.correct || 0;
                 const attempts = p.attempts || 0;
@@ -3769,6 +3868,11 @@ const aVsBComparisons = {
                 }
                 const recencyW = Math.max(1.0, Math.min(3.0, Math.sqrt(daysSince))).toFixed(2);
                 const masteryW = p.mastered ? '0.30' : '1.00';
+                let voteM = 1.0;
+                if (p.starred) voteM += 0.5;
+                if (p.upvoted) voteM += 0.5;
+                if (p.downvoted) voteM *= 0.3;
+                const voteW = voteM.toFixed(2);
                 const finalWeight = calculateWordWeight(p).toFixed(2);
 
                 return `
@@ -3799,6 +3903,10 @@ const aVsBComparisons = {
                                 <div class="weight-component">
                                     <span class="weight-component-label">Mastery penalty</span>
                                     <span class="weight-component-value">&times;${masteryW}</span>
+                                </div>
+                                <div class="weight-component">
+                                    <span class="weight-component-label">Vote boost</span>
+                                    <span class="weight-component-value">&times;${voteW}</span>
                                 </div>
                                 <div class="weight-component" style="border-top: 1px solid var(--glass-border); padding-top: 6px; margin-top: 4px;">
                                     <span class="weight-component-label" style="color: var(--gold);">Final weight</span>
@@ -3846,7 +3954,13 @@ const aVsBComparisons = {
             const recencyBoost = Math.max(1.0, Math.min(3.0, Math.sqrt(daysSince)));
             const masteryPenalty = progress.mastered ? 0.3 : 1.0;
 
-            return baseWeight * recencyBoost * masteryPenalty;
+            // Vote multiplier: starred or upvoted boost weight, downvoted reduces it
+            let voteMultiplier = 1.0;
+            if (progress.starred) voteMultiplier += 0.5;
+            if (progress.upvoted) voteMultiplier += 0.5;
+            if (progress.downvoted) voteMultiplier *= 0.3;
+
+            return baseWeight * recencyBoost * masteryPenalty * voteMultiplier;
         }
 
         function weightedRandomChoice(probabilities) {
@@ -4167,7 +4281,8 @@ const aVsBComparisons = {
                 ).join('');
 
                 content.innerHTML = `
-                    <div class="question-card">
+                    <div class="question-card" style="position:relative;">
+                        ${getWordActionButtons(word.id || '')}
                         <h2 style="text-align: center; margin-bottom: 20px;">Click the card to flip</h2>
                         <div class="flip-card">
                             <div class="flip-card-inner" id="flipCard" onclick="this.classList.toggle('flipped')">
@@ -4261,7 +4376,8 @@ const aVsBComparisons = {
             }
 
             content.innerHTML = `
-                <div class="question-card">
+                <div class="question-card" style="position:relative;">
+                    ${getWordActionButtons(word.id || '')}
                     <h2 style="text-align: center; margin-bottom: 20px;">Click the card to flip</h2>
                     <div class="flip-card">
                         <div class="flip-card-inner" id="flipCard" onclick="this.classList.toggle('flipped')">
@@ -4287,7 +4403,8 @@ const aVsBComparisons = {
             const allOptions = shuffleArray([...wrongAnswers, word]);
 
             content.innerHTML = `
-                <div class="question-card">
+                <div class="question-card" style="position:relative;">
+                    ${getWordActionButtons(word.id || '')}
                     <div class="question">What is the definition of:</div>
                     <div class="word-display">${word.word}</div>
                     <p class="pronunciation">${word.pronunciation}</p>
@@ -4315,7 +4432,8 @@ const aVsBComparisons = {
             const allOptions = shuffleArray([...wrongAnswers, word]);
 
             content.innerHTML = `
-                <div class="question-card">
+                <div class="question-card" style="position:relative;">
+                    ${getWordActionButtons(word.id || '')}
                     <div class="question">Fill in the blank:</div>
                     <p style="font-size: 1.1em; margin: 20px 0; font-style: italic; color: var(--text); line-height: 1.6;">"${blankedSentence}"</p>
                     <p style="margin: 10px 0 20px; color: var(--text-muted); font-size: 0.9em;">Hint: ${word.definition}</p>
@@ -4334,7 +4452,8 @@ const aVsBComparisons = {
             const allOptions = shuffleArray([...wrongAnswers, word]);
 
             content.innerHTML = `
-                <div class="question-card">
+                <div class="question-card" style="position:relative;">
+                    ${getWordActionButtons(word.id || '')}
                     <div class="question">Which word matches this definition?</div>
                     <p style="font-size: 1.3em; margin: 20px 0; font-weight: 600; color: var(--text);">"${word.definition}"</p>
                     <div class="options">
@@ -4364,7 +4483,8 @@ const aVsBComparisons = {
             const correctIdx = allOptions.indexOf(correctSynonym);
 
             content.innerHTML = `
-                <div class="question-card">
+                <div class="question-card" style="position:relative;">
+                    ${getWordActionButtons(word.id || '')}
                     <div class="question">Which word is a synonym of:</div>
                     <div class="word-display">${word.word}</div>
                     <p class="pronunciation">${word.pronunciation}</p>
@@ -4385,7 +4505,8 @@ const aVsBComparisons = {
             const correctIdx = allOptions.indexOf(correctAntonym);
 
             content.innerHTML = `
-                <div class="question-card">
+                <div class="question-card" style="position:relative;">
+                    ${getWordActionButtons(word.id || '')}
                     <div class="question">Which word is the opposite of:</div>
                     <div class="word-display">${word.word}</div>
                     <p class="pronunciation">${word.pronunciation}</p>
@@ -4406,7 +4527,8 @@ const aVsBComparisons = {
             const correctIdx = allOptions.indexOf(word.american);
 
             content.innerHTML = `
-                <div class="question-card">
+                <div class="question-card" style="position:relative;">
+                    ${getWordActionButtons(word.id || '')}
                     <div class="question">What is the American English for:</div>
                     <div class="word-display">${word.british}</div>
                     <div class="options">
@@ -4426,7 +4548,8 @@ const aVsBComparisons = {
             const correctIdx = allOptions.indexOf(word.british);
 
             content.innerHTML = `
-                <div class="question-card">
+                <div class="question-card" style="position:relative;">
+                    ${getWordActionButtons(word.id || '')}
                     <div class="question">What is the British English for:</div>
                     <div class="word-display">${word.american}</div>
                     <div class="options">
@@ -4867,6 +4990,7 @@ const aVsBComparisons = {
             overlay.innerHTML = `
                 <div class="word-detail-card">
                     <button class="word-detail-close" onclick="hideWordDetail()">&times;</button>
+                    ${getWordActionButtons(word.id || '')}
                     <div class="detail-word-name">${word.word}</div>
                     <div class="detail-category">${word.category || currentSection}</div>
                     ${enrichedHtml}
@@ -5120,6 +5244,82 @@ const aVsBComparisons = {
             el.style.background = isError ? 'rgba(232, 133, 110, 0.1)' : 'rgba(76, 175, 80, 0.1)';
             el.style.color = isError ? 'var(--coral)' : 'var(--green)';
             el.textContent = msg;
+        }
+
+        function getWordActionButtons(wordId) {
+            const p = userProgressCache[wordId] || {};
+            const starred = p.starred ? 'active' : '';
+            const upvoted = p.upvoted ? 'active' : '';
+            const downvoted = p.downvoted ? 'active' : '';
+            return `
+                <div class="word-action-buttons" onclick="event.stopPropagation()">
+                    <button class="word-action-btn star-btn ${starred}" onclick="event.stopPropagation(); toggleWordAction('${wordId}', 'starred')" title="Star">
+                        <svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+                    </button>
+                    <button class="word-action-btn upvote-btn ${upvoted}" onclick="event.stopPropagation(); toggleWordAction('${wordId}', 'upvoted')" title="See more often">
+                        <svg viewBox="0 0 24 24"><polygon points="12,4 22,20 2,20"/></svg>
+                    </button>
+                    <button class="word-action-btn downvote-btn ${downvoted}" onclick="event.stopPropagation(); toggleWordAction('${wordId}', 'downvoted')" title="See less often">
+                        <svg viewBox="0 0 24 24"><polygon points="2,4 22,4 12,20"/></svg>
+                    </button>
+                </div>
+            `;
+        }
+
+        async function toggleWordAction(wordId, action) {
+            if (!currentUserId) return;
+            if (!userProgressCache[wordId]) {
+                userProgressCache[wordId] = { attempts: 0, correct: 0, incorrect: 0, consecutiveCorrect: 0 };
+            }
+            const p = userProgressCache[wordId];
+            const wasOn = !!p[action];
+
+            if (wasOn) {
+                // Toggle off
+                p[action] = false;
+            } else {
+                // Toggle on — handle conflicts
+                if (action === 'starred') {
+                    p.starred = true;
+                    p.downvoted = false; // star removes downvote
+                } else if (action === 'upvoted') {
+                    p.upvoted = true;
+                    p.downvoted = false; // upvote removes downvote
+                } else if (action === 'downvoted') {
+                    p.downvoted = true;
+                    p.upvoted = false;  // downvote removes upvote
+                    p.starred = false;  // downvote removes star
+                }
+            }
+
+            // Update all visible buttons for this word
+            document.querySelectorAll(`.word-action-btn`).forEach(btn => {
+                const container = btn.closest('.word-action-buttons');
+                if (!container) return;
+                // Check if this container belongs to the same word by looking for the wordId in onclick
+                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + wordId + "'")) {
+                    if (btn.classList.contains('star-btn')) {
+                        btn.classList.toggle('active', !!p.starred);
+                    } else if (btn.classList.contains('upvote-btn')) {
+                        btn.classList.toggle('active', !!p.upvoted);
+                    } else if (btn.classList.contains('downvote-btn')) {
+                        btn.classList.toggle('active', !!p.downvoted);
+                    }
+                }
+            });
+
+            // Save to Firestore
+            try {
+                const docRef = db.collection('userProgress')
+                    .doc(currentUserId).collection('words').doc(wordId);
+                await docRef.set({
+                    starred: !!p.starred,
+                    upvoted: !!p.upvoted,
+                    downvoted: !!p.downvoted
+                }, { merge: true });
+            } catch (e) {
+                console.warn('Failed to save word action:', e);
+            }
         }
 
         function addCommunityWordToLocal(data) {
