@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vocabulary Dojo</title>
 
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vocab Dojo">
+    <meta name="theme-color" content="#1a1a2e">
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -1786,6 +1794,31 @@
             margin-bottom: 6px;
         }
 
+        .offline-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(90deg, var(--coral), #c0392b);
+            color: white;
+            text-align: center;
+            padding: 6px 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            z-index: 9999;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .offline-banner.visible {
+            display: block;
+        }
+
+        body.is-offline {
+            padding-top: 30px;
+        }
+
         .word-action-buttons {
             position: absolute;
             top: 12px;
@@ -1999,6 +2032,8 @@
     </style>
 </head>
 <body>
+    <div id="offlineBanner" class="offline-banner">You're offline — progress will sync when you reconnect</div>
+
     <!-- LOGIN CONTAINER -->
     <div id="loginContainer">
         <div class="login-card">
@@ -2233,6 +2268,16 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+
+        // Enable offline persistence
+        db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
+            if (err.code === 'failed-precondition') {
+                console.log('Firestore persistence: multiple tabs open');
+            } else if (err.code === 'unimplemented') {
+                console.log('Firestore persistence: not supported by browser');
+            }
+        });
+
         const provider = new firebase.auth.GoogleAuthProvider();
 
         // ============================================
@@ -2324,25 +2369,52 @@
 
         // Check if user's email is in the allowlist
         async function isUserAllowed(email) {
-            const snapshot = await db.collection('allowedUsers')
-                .where('email', '==', email)
-                .limit(1)
-                .get();
-            return !snapshot.empty;
+            try {
+                const snapshot = await db.collection('allowedUsers')
+                    .where('email', '==', email)
+                    .limit(1)
+                    .get();
+                if (!snapshot.empty) {
+                    // Cache the allowed status locally
+                    localStorage.setItem('vocabDojo_allowedUser', email);
+                    return true;
+                }
+                return false;
+            } catch (err) {
+                // If offline, check cached allowlist
+                const cachedEmail = localStorage.getItem('vocabDojo_allowedUser');
+                if (cachedEmail === email) {
+                    console.log('Offline: using cached allowlist for', email);
+                    return true;
+                }
+                throw err;
+            }
         }
 
         // Listen for auth state changes
         auth.onAuthStateChanged(async function(user) {
             if (user) {
-                const allowed = await isUserAllowed(user.email);
-                if (allowed) {
-                    await unlockGame();
-                } else {
-                    // User is signed in but not on the allowlist
-                    const errorMsg = document.getElementById('errorMessage');
-                    errorMsg.textContent = 'Sorry, your account is not authorized to access this game.';
-                    errorMsg.classList.add('show');
-                    auth.signOut();
+                try {
+                    const allowed = await isUserAllowed(user.email);
+                    if (allowed) {
+                        await unlockGame();
+                    } else {
+                        // User is signed in but not on the allowlist
+                        const errorMsg = document.getElementById('errorMessage');
+                        errorMsg.textContent = 'Sorry, your account is not authorized to access this game.';
+                        errorMsg.classList.add('show');
+                        auth.signOut();
+                    }
+                } catch (err) {
+                    // If offline and we have cached credentials, still unlock
+                    const cachedEmail = localStorage.getItem('vocabDojo_allowedUser');
+                    if (cachedEmail === user.email) {
+                        console.log('Offline mode: unlocking with cached credentials');
+                        await unlockGame();
+                    } else {
+                        console.warn('Auth check failed and no cached credentials:', err);
+                        showLogin();
+                    }
                 }
             } else {
                 showLogin();
@@ -5398,6 +5470,32 @@ const aVsBComparisons = {
 
         updateStats();
         updateGameModes();
+
+        // ============================================
+        // SERVICE WORKER & OFFLINE DETECTION
+        // ============================================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').then(function(reg) {
+                console.log('Service Worker registered, scope:', reg.scope);
+            }).catch(function(err) {
+                console.warn('Service Worker registration failed:', err);
+            });
+        }
+
+        function updateOnlineStatus() {
+            const banner = document.getElementById('offlineBanner');
+            if (!navigator.onLine) {
+                banner.classList.add('visible');
+                document.body.classList.add('is-offline');
+            } else {
+                banner.classList.remove('visible');
+                document.body.classList.remove('is-offline');
+            }
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
     </script>
 
     <!-- Firebase AI Logic (modular SDK) for Gemini enrichment -->
