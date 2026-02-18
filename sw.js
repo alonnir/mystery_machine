@@ -1,7 +1,7 @@
 // Service Worker for Vocabulary Dojo PWA
 // Handles caching, offline support, and asset management
 
-const CACHE_NAME = 'vocab-dojo-v1';
+const CACHE_NAME = 'vocab-dojo-v2';
 const AUDIO_CACHE = 'vocab-dojo-audio-v1';
 
 // Core assets to precache on install
@@ -11,52 +11,66 @@ const PRECACHE_URLS = [
   './word_details.js',
   './manifest.json',
   './icons/icon-192.png',
-  './icons/icon-512.png',
-  // Firebase SDK scripts
+  './icons/icon-512.png'
+];
+
+// External assets to cache opportunistically (won't block install if they fail)
+const EXTERNAL_URLS = [
   'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js',
-  'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js',
-  // Google Fonts CSS
-  'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap'
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js'
 ];
 
 // Install event: precache core assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
-
+  console.log('[SW] Installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Precaching core assets...');
-      return cache.addAll(PRECACHE_URLS).catch((error) => {
-        console.error('[SW] Precache failed:', error);
-        // Don't fail install if precache fails - network will be available
-        return Promise.resolve();
-      });
-    }).then(() => {
-      // Activate immediately without waiting for other tabs to close
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // Precache local assets (must succeed)
+      console.log('[SW] Precaching local assets...');
+      await cache.addAll(PRECACHE_URLS);
+      console.log('[SW] Local assets cached');
+
+      // Cache external assets individually (failures are OK)
+      for (const url of EXTERNAL_URLS) {
+        try {
+          await cache.add(url);
+          console.log('[SW] Cached:', url);
+        } catch (err) {
+          console.warn('[SW] Could not cache (will try at runtime):', url);
+        }
+      }
+
+      // Cache Google Fonts CSS with no-cors mode
+      try {
+        const fontResp = await fetch('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+        if (fontResp.ok) {
+          await cache.put('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap', fontResp);
+          console.log('[SW] Google Fonts CSS cached');
+        }
+      } catch (err) {
+        console.warn('[SW] Could not cache Google Fonts CSS');
+      }
+
       self.skipWaiting();
     })
   );
 });
 
-// Activate event: clean up old caches
+// Activate event: clean up old caches and claim clients
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
-
+  console.log('[SW] Activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName !== AUDIO_CACHE) {
-            console.log('[SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
+        cacheNames.map((name) => {
+          if (name !== CACHE_NAME && name !== AUDIO_CACHE) {
+            console.log('[SW] Deleting old cache:', name);
+            return caches.delete(name);
           }
         })
       );
-    }).then(() => {
-      // Claim all clients immediately
-      return self.clients.claim();
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
@@ -66,161 +80,113 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
+  if (request.method !== 'GET') return;
 
-  // Strategy 1: Cache-first for audio files (lazy cache)
-  if (url.pathname.match(/\/audio\/.*\.mp3$/)) {
+  // NAVIGATION REQUESTS: always serve cached index.html as fallback
+  if (request.mode === 'navigate') {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          console.log('[SW] Audio served from cache:', url.pathname);
-          return cachedResponse;
-        }
-
-        return fetch(request)
-          .then((networkResponse) => {
-            // Cache the audio file for future use
-            if (networkResponse && networkResponse.status === 200) {
-              const responseToCache = networkResponse.clone();
-              caches.open(AUDIO_CACHE).then((cache) => {
-                cache.put(request, responseToCache);
-                console.log('[SW] Audio cached:', url.pathname);
-              });
-            }
-            return networkResponse;
-          })
-          .catch(() => {
-            console.warn('[SW] Audio fetch failed (offline):', url.pathname);
-            return caches.match(request);
-          });
+      fetch(request).catch(() => {
+        console.log('[SW] Navigation offline, serving cached index.html');
+        return caches.match('./index.html') || caches.match('./');
       })
     );
     return;
   }
 
-  // Strategy 2: Network-first for Firebase APIs
+  // AUDIO FILES: cache-first with lazy caching
+  if (url.pathname.match(/\/audio\/.*\.mp3$/)) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((resp) => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(AUDIO_CACHE).then((c) => c.put(request, clone));
+          }
+          return resp;
+        }).catch(() => new Response('', { status: 404 }));
+      })
+    );
+    return;
+  }
+
+  // FIREBASE APIs: network-only, let Firestore IndexedDB handle offline
   if (
     url.hostname.includes('firestore.googleapis.com') ||
     url.hostname.includes('identitytoolkit.googleapis.com') ||
-    url.hostname.includes('securetoken.googleapis.com')
+    url.hostname.includes('securetoken.googleapis.com') ||
+    url.hostname.includes('www.googleapis.com')
   ) {
-    event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          return networkResponse;
-        })
-        .catch((error) => {
-          console.warn('[SW] Firebase API unavailable (offline):', error);
-          // Firebase handles offline caching via IndexedDB
-          return caches.match(request);
-        })
-    );
-    return;
+    return; // Don't intercept — let Firebase SDK handle it
   }
 
-  // Strategy 3: Cache-first for Firebase AI modular SDK
-  if (url.hostname === 'www.gstatic.com' && url.pathname.includes('/firebasejs/12.9.0')) {
+  // GOOGLE FONTS: cache-first for font files and CSS
+  if (url.hostname === 'fonts.gstatic.com' || url.hostname === 'fonts.googleapis.com') {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        return fetch(request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseToCache);
-              });
-            }
-            return networkResponse;
-          });
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((resp) => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return resp;
+        }).catch(() => new Response('', { status: 404 }));
       })
     );
     return;
   }
 
-  // Strategy 4: Cache-first for Google Fonts font files
-  if (url.hostname === 'fonts.gstatic.com') {
+  // FIREBASE SDK & CDN SCRIPTS: cache-first
+  if (url.hostname === 'www.gstatic.com') {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        return fetch(request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseToCache);
-              });
-            }
-            return networkResponse;
-          });
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((resp) => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return resp;
+        }).catch(() => caches.match(request));
       })
     );
     return;
   }
 
-  // Strategy 5: Cache-first for other cached core assets
-  // (index, CSS, JS, images, manifest, Firebase SDK scripts, Google Fonts CSS)
+  // STATIC ASSETS (JS, CSS, images, JSON): cache-first
   if (
-    url.pathname === '/' ||
     url.pathname.endsWith('.html') ||
     url.pathname.endsWith('.js') ||
     url.pathname.endsWith('.css') ||
     url.pathname.endsWith('.json') ||
     url.pathname.endsWith('.png') ||
     url.pathname.endsWith('.jpg') ||
-    url.pathname.endsWith('.jpeg') ||
-    url.pathname.endsWith('.svg') ||
-    url.pathname.endsWith('.webp')
+    url.pathname.endsWith('.svg')
   ) {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        return fetch(request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseToCache);
-              });
-            }
-            return networkResponse;
-          })
-          .catch(() => {
-            console.warn('[SW] Asset fetch failed:', url.pathname);
-            // Return cached version if available
-            return caches.match(request);
-          });
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((resp) => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return resp;
+        }).catch(() => caches.match(request));
       })
     );
     return;
   }
 
-  // Strategy 6: Network-first for everything else
+  // EVERYTHING ELSE: network-first with cache fallback
   event.respondWith(
-    fetch(request)
-      .then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        console.warn('[SW] Fetch failed, returning cached version:', url.pathname);
-        return caches.match(request);
-      })
+    fetch(request).then((resp) => {
+      if (resp && resp.status === 200) {
+        const clone = resp.clone();
+        caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+      }
+      return resp;
+    }).catch(() => caches.match(request))
   );
 });
