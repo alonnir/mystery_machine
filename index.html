@@ -2168,6 +2168,12 @@
                         <div class="mode-title">Mixed Challenge</div>
                         <div class="mode-description">Random mix of all modes. Keep your skills sharp!</div>
                     </div>
+
+                    <div class="game-mode-card" data-mode="streak" onclick="startGame('streak')" style="border-color: rgba(240,194,127,0.3);">
+                        <div class="mode-icon" style="color: var(--coral);">SK</div>
+                        <div class="mode-title">Streak Mode</div>
+                        <div class="mode-description">How far can you go? Keep answering until you get one wrong. Chase your best streak!</div>
+                    </div>
                 </div>
 
                 <!-- Action Buttons -->
@@ -2487,6 +2493,9 @@
 
             // Load community-added words
             await loadCommunityWords();
+
+            // Load best streak
+            await loadBestStreak();
 
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('gameContainer').classList.add('unlocked');
@@ -3551,6 +3560,10 @@ const aVsBComparisons = {
         let autoAdvanceTimeout = null;
         let touchStartX = 0;
         let touchStartY = 0;
+        let streakModeActive = false;
+        let streakModeCount = 0;
+        let bestStreakEver = 0;
+        let streakWordPool = [];
 
         // ============================================
         // NAVIGATION
@@ -4005,6 +4018,146 @@ const aVsBComparisons = {
         }
 
         // ============================================
+        // STREAK MODE HELPERS
+        // ============================================
+        async function loadBestStreak() {
+            if (!currentUserId) return;
+            try {
+                const doc = await db.collection('userProgress').doc(currentUserId).get();
+                if (doc.exists && doc.data().bestStreak) {
+                    bestStreakEver = doc.data().bestStreak;
+                }
+            } catch (err) {
+                const cached = localStorage.getItem('vocabDojo_bestStreak');
+                if (cached) bestStreakEver = parseInt(cached) || 0;
+            }
+        }
+
+        async function saveBestStreak(newBest) {
+            bestStreakEver = newBest;
+            localStorage.setItem('vocabDojo_bestStreak', newBest);
+            if (!currentUserId) return;
+            try {
+                await db.collection('userProgress').doc(currentUserId).set(
+                    { bestStreak: newBest }, { merge: true }
+                );
+            } catch (err) {
+                console.warn('Failed to save best streak:', err);
+            }
+        }
+
+        function getNextStreakWord() {
+            // If pool is running low, refill it
+            if (streakWordPool.length < 5) {
+                let pool;
+                if (currentSection === 'vocabulary') {
+                    pool = selectWordsForGame(50);
+                } else {
+                    pool = shuffleArray([...getSectionWords()]);
+                }
+                // Filter out words already used this session
+                const usedIds = new Set(currentWords.map(w => w.id));
+                pool = pool.filter(w => !usedIds.has(w.id));
+                if (pool.length === 0) {
+                    // All words exhausted, reshuffle everything
+                    pool = currentSection === 'vocabulary' ? selectWordsForGame(50) : shuffleArray([...getSectionWords()]);
+                }
+                streakWordPool = pool;
+            }
+            return streakWordPool.shift();
+        }
+
+        function updateStreakProgress() {
+            const fill = document.getElementById('progressFill');
+            if (fill) fill.style.width = '100%';
+            const text = document.getElementById('progressText');
+            if (text) text.innerHTML = `<span style="color:var(--gold);font-weight:700;">Streak: ${streakModeCount}</span> &nbsp; Best: ${bestStreakEver}`;
+            const dots = document.getElementById('wordDots');
+            if (dots) dots.innerHTML = '';
+        }
+
+        function streakNextQuestion() {
+            updateStreakProgress();
+            const word = getNextStreakWord();
+            if (!word) {
+                endStreakMode();
+                return;
+            }
+            currentWords.push(word);
+            currentIndex = currentWords.length - 1;
+
+            const content = document.getElementById('gameContent');
+
+            // Pick a random quiz mode (not flashcard — need a definite right/wrong)
+            let modes = [];
+            if (currentSection === 'vocabulary') {
+                modes = ['multiple', 'definition'];
+                if (wordSynonyms && wordSynonyms[word.word]) modes.push('synonym');
+                if (wordAntonyms && wordAntonyms[word.word]) modes.push('opposite');
+            } else if (currentSection === 'britam') {
+                modes = ['britam', 'amtobrit', 'multiple'];
+            } else {
+                modes = ['multiple', 'definition'];
+            }
+
+            const mode = modes[Math.floor(Math.random() * modes.length)];
+            switch(mode) {
+                case 'multiple': renderMultipleChoice(content, word); break;
+                case 'definition': renderDefinitionMatch(content, word); break;
+                case 'synonym': renderSynonym(content, word); break;
+                case 'opposite': renderOpposite(content, word); break;
+                case 'britam': renderBritToAmerican(content, word); break;
+                case 'amtobrit': renderAmericanToBrit(content, word); break;
+                default: renderMultipleChoice(content, word); break;
+            }
+        }
+
+        function endStreakMode() {
+            if (autoAdvanceTimeout) { clearTimeout(autoAdvanceTimeout); autoAdvanceTimeout = null; }
+            const isNewBest = streakModeCount > bestStreakEver;
+            if (isNewBest) saveBestStreak(streakModeCount);
+            const displayBest = isNewBest ? streakModeCount : bestStreakEver;
+
+            document.getElementById('gameArea').classList.add('showing-results');
+            const content = document.getElementById('gameContent');
+
+            let message = '';
+            let subMessage = '';
+            if (streakModeCount === 0) {
+                message = 'Better luck next time!';
+                subMessage = 'Every master was once a beginner.';
+            } else if (streakModeCount < 5) {
+                message = 'Nice start!';
+                subMessage = 'Keep practising to build longer streaks.';
+            } else if (streakModeCount < 10) {
+                message = 'Impressive run!';
+                subMessage = 'You\'re building real momentum.';
+            } else if (streakModeCount < 20) {
+                message = 'Outstanding streak!';
+                subMessage = 'You\'re a force to be reckoned with.';
+            } else {
+                message = 'Legendary!';
+                subMessage = 'Truly extraordinary vocabulary mastery.';
+            }
+
+            content.innerHTML = `
+                <div class="result-summary" style="text-align: center;">
+                    <h2 style="margin-bottom: 10px;">Streak Over!</h2>
+                    <div class="result-score" style="font-size: 4em; color: var(--coral);">${streakModeCount}</div>
+                    <p style="font-size: 0.9em; color: var(--text-muted); margin-bottom: 8px;">correct in a row</p>
+                    ${isNewBest ? '<p style="font-size: 1.2em; color: var(--gold); font-weight: 700; margin: 12px 0;">New personal best!</p>' : `<p style="font-size: 0.95em; color: var(--text-muted); margin: 12px 0;">Personal best: ${displayBest}</p>`}
+                    <p style="font-size: 1.2em; margin: 16px 0; color: var(--text);">${message}</p>
+                    <p style="font-size: 0.95em; color: var(--text-muted);">${subMessage}</p>
+                    <div style="margin-top: 30px;">
+                        <button class="menu-button" onclick="startGame('streak')" style="margin: 10px auto; display: block; width: auto; padding: 15px 40px;">Try Again</button>
+                        <button class="back-button" onclick="backToMenu()" style="margin: 10px auto; display: block;">Back to Menu</button>
+                    </div>
+                </div>
+            `;
+            streakModeActive = false;
+        }
+
+        // ============================================
         // WEIGHTED WORD SELECTION (Spaced Repetition)
         // ============================================
         function calculateWordWeight(progress) {
@@ -4141,6 +4294,41 @@ const aVsBComparisons = {
         function startGame(mode) {
             currentMode = mode;
             currentCategory = document.getElementById('categoryFilter').value;
+            if (autoAdvanceTimeout) { clearTimeout(autoAdvanceTimeout); autoAdvanceTimeout = null; }
+
+            // Streak mode: special setup
+            if (mode === 'streak') {
+                streakModeActive = true;
+                streakModeCount = 0;
+                currentWords = [];
+                currentIndex = 0;
+                score = 0;
+                roundAnswers = [];
+                // Pre-fill word pool
+                let pool;
+                if (currentSection === 'vocabulary') {
+                    pool = selectWordsForGame(50);
+                } else {
+                    pool = shuffleArray([...getSectionWords()]);
+                }
+                streakWordPool = pool;
+
+                document.getElementById('mainMenu').style.display = 'none';
+                document.getElementById('gameContainer').classList.add('game-playing');
+                const gameArea = document.getElementById('gameArea');
+                gameArea.classList.add('active');
+                gameArea.classList.remove('showing-results');
+
+                // Hide nav arrows in streak mode
+                document.getElementById('navLeft').style.display = 'none';
+                document.getElementById('navRight').style.display = 'none';
+
+                streakNextQuestion();
+                return;
+            }
+
+            streakModeActive = false;
+
             try {
                 let pool;
                 if (currentSection === 'vocabulary') {
@@ -4165,7 +4353,6 @@ const aVsBComparisons = {
             currentIndex = 0;
             score = 0;
             roundAnswers = new Array(currentWords.length).fill(null);
-            if (autoAdvanceTimeout) { clearTimeout(autoAdvanceTimeout); autoAdvanceTimeout = null; }
 
             document.getElementById('mainMenu').style.display = 'none';
             document.getElementById('gameContainer').classList.add('game-playing');
@@ -4173,16 +4360,24 @@ const aVsBComparisons = {
             gameArea.classList.add('active');
             gameArea.classList.remove('showing-results');
 
+            // Show nav arrows for normal modes
+            document.getElementById('navLeft').style.display = '';
+            document.getElementById('navRight').style.display = '';
+
             nextQuestion();
         }
 
         function backToMenu() {
             if (autoAdvanceTimeout) { clearTimeout(autoAdvanceTimeout); autoAdvanceTimeout = null; }
+            streakModeActive = false;
             document.getElementById('mainMenu').style.display = 'block';
             document.getElementById('gameContainer').classList.remove('game-playing');
             const gameArea = document.getElementById('gameArea');
             gameArea.classList.remove('active');
             gameArea.classList.remove('showing-results');
+            // Restore nav arrows
+            document.getElementById('navLeft').style.display = '';
+            document.getElementById('navRight').style.display = '';
         }
 
         function switchSection() {
@@ -4251,7 +4446,7 @@ const aVsBComparisons = {
                     if (['fillblank', 'synonym', 'opposite', 'definition'].includes(mode)) card.style.display = 'none';
                     // Show britam and amtobrit modes
                 } else if (currentSection === 'avsb') {
-                    // Only flashcard for A vs B
+                    // Only flashcard for A vs B (no streak — needs definite answers)
                     if (mode !== 'flashcard') card.style.display = 'none';
                 } else {
                     // vocabulary - show all except britam/amtobrit
@@ -4672,7 +4867,29 @@ const aVsBComparisons = {
             const cw = currentWords[currentIndex];
             if (cw && cw.id) saveWordProgress(cw.id, isCorrect);
 
-            // Snapshot answer for review navigation
+            // Streak mode handling
+            if (streakModeActive) {
+                if (isCorrect) {
+                    streakModeCount++;
+                    updateStreakProgress();
+                    if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
+                    autoAdvanceTimeout = setTimeout(() => {
+                        autoAdvanceTimeout = null;
+                        streakNextQuestion();
+                    }, 1200);
+                } else {
+                    // Wrong answer — show it briefly then end
+                    if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
+                    autoAdvanceTimeout = setTimeout(() => {
+                        autoAdvanceTimeout = null;
+                        endStreakMode();
+                    }, 2000);
+                }
+                updateStats();
+                return;
+            }
+
+            // Normal mode
             snapshotAnswer(isCorrect);
             updateStats();
             updateDots();
@@ -4710,7 +4927,28 @@ const aVsBComparisons = {
             const cw = currentWords[currentIndex];
             if (cw && cw.id) saveWordProgress(cw.id, isRight);
 
-            // Snapshot answer for review navigation
+            // Streak mode handling
+            if (streakModeActive) {
+                if (isRight) {
+                    streakModeCount++;
+                    updateStreakProgress();
+                    if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
+                    autoAdvanceTimeout = setTimeout(() => {
+                        autoAdvanceTimeout = null;
+                        streakNextQuestion();
+                    }, 1200);
+                } else {
+                    if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
+                    autoAdvanceTimeout = setTimeout(() => {
+                        autoAdvanceTimeout = null;
+                        endStreakMode();
+                    }, 2000);
+                }
+                updateStats();
+                return;
+            }
+
+            // Normal mode
             snapshotAnswer(isRight);
             updateStats();
             updateDots();
