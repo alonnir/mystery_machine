@@ -5,8 +5,8 @@
   "start_url": "/mystery_machine/",
   "scope": "/mystery_machine/",
   "display": "standalone",
-  "background_color": "#1a1a2e",
-  "theme_color": "#1a1a2e",
+  "background_color": "#FFF5E6",
+  "theme_color": "#FFF5E6",
   "orientation": "any",
   "icons": [
     {

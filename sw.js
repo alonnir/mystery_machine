@@ -1,7 +1,7 @@
 // Service Worker for Vocabulary Dojo PWA
 // Handles caching, offline support, and asset management
 
-const CACHE_NAME = 'vocab-dojo-v2';
+const CACHE_NAME = 'vocab-dojo-v3';
 const AUDIO_CACHE = 'vocab-dojo-audio-v1';
 
 // Core assets to precache on install
