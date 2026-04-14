@@ -4731,26 +4731,6 @@ const aVsBComparisons = {
                         <label>Definition <span style="opacity:0.5">(auto-filled if found)</span></label>
                         <input type="text" class="add-word-input" id="addWord_definition" placeholder="Will auto-fill from dictionary...">
                     </div>
-                    <div class="add-word-field">
-                        <label>Category</label>
-                        <select class="add-word-input" id="addWord_category">
-                            <option value="positive">Positive Words</option>
-                            <option value="negative">Negative Words</option>
-                            <option value="descriptive">Descriptive Words</option>
-                            <option value="abstract">Abstract Concepts</option>
-                            <option value="actions">Action Verbs</option>
-                            <option value="everyday">Everyday Words</option>
-                            <option value="formal">Formal Language</option>
-                            <option value="literary">Literary Devices</option>
-                            <option value="science">Science & Tech</option>
-                            <option value="finance">Finance & Business</option>
-                            <option value="legal">Legal Terms</option>
-                            <option value="medical">Medical Terms</option>
-                            <option value="emotions">Emotions</option>
-                            <option value="academic">Academic</option>
-                            <option value="uncategorised">Uncategorised</option>
-                        </select>
-                    </div>
                 `;
             } else if (section === 'latin') {
                 fields.innerHTML = `
@@ -4837,6 +4817,7 @@ const aVsBComparisons = {
         let lookupTimer      = null;
         let lastLookedUpWord = '';   // word that produced the current auto-fill
         let _lookupAllDefs   = [];   // shared allDefs so the picker never needs serialization
+        let _lookupPosStr    = '';   // part-of-speech string from last successful lookup
 
         function debounceLookup() {
             const wordInput = document.getElementById('addWord_word');
@@ -4852,6 +4833,7 @@ const aVsBComparisons = {
                     defInput.dataset.autofilled = '';
                 }
                 lastLookedUpWord = '';
+                _lookupPosStr = '';
                 const status = document.getElementById('addWordLookupStatus');
                 if (status) status.style.display = 'none';
             }
@@ -4947,14 +4929,8 @@ const aVsBComparisons = {
                     console.log('[LOOKUP] Auto-filled definition for "' + word + '"');
                 }
 
-                // ── Auto-select category ─────────────────────────────────
-                const allPos = (entry.meanings || []).map(m => m.partOfSpeech || '').join(' ');
-                const guessed = guessCategory(word, _lookupAllDefs, allPos);
-                const catEl = document.getElementById('addWord_category');
-                if (catEl) {
-                    catEl.value = guessed;
-                    console.log('[LOOKUP] Auto-selected category: "' + guessed + '" (pos: "' + allPos.trim() + '")');
-                }
+                // Store pos string for use at submit time
+                _lookupPosStr = (entry.meanings || []).map(m => m.partOfSpeech || '').join(' ');
 
                 // ── Status message ───────────────────────────────────────
                 status.style.background = 'rgba(76, 175, 80, 0.2)';
@@ -5082,9 +5058,10 @@ const aVsBComparisons = {
             if (section === 'vocabulary') {
                 const word = (document.getElementById('addWord_word').value || '').trim();
                 const def = (document.getElementById('addWord_definition').value || '').trim();
-                const cat = document.getElementById('addWord_category').value;
                 if (!word) { showAddMsg(msgEl, 'Please enter a word.', true); return; }
                 if (!def) { showAddMsg(msgEl, 'Please enter a definition.', true); return; }
+                const cat = guessCategory(word, [{ text: def, example: '' }], _lookupPosStr);
+                console.log('[SUBMIT] Auto-assigned category "' + cat + '" for "' + word + '"');
                 wordData.word = word.charAt(0).toUpperCase() + word.slice(1);
                 wordData.definition = def;
                 wordData.category = cat;
