@@ -4816,38 +4816,181 @@ const aVsBComparisons = {
             const defInput = document.getElementById('addWord_definition');
             const status = document.getElementById('addWordLookupStatus');
             const word = wordInput ? wordInput.value.trim() : '';
-            if (!word || word.length < 2) { status.style.display = 'none'; return; }
+
+            if (!word || word.length < 2) {
+                status.style.display = 'none';
+                return;
+            }
 
             status.style.display = 'block';
             status.style.background = 'var(--glass-light)';
             status.style.color = 'var(--text-muted)';
             status.textContent = 'Looking up "' + word + '"...';
 
+            console.log('[LOOKUP] Searching for word:', word);
+
             try {
-                const resp = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word.toLowerCase()));
-                if (!resp.ok) throw new Error('Not found');
-                const data = await resp.json();
-                const entry = data[0];
-                const meanings = entry.meanings || [];
-                let def = '';
-                let pronunciation = '';
-                if (meanings.length > 0 && meanings[0].definitions && meanings[0].definitions.length > 0) {
-                    def = meanings[0].definitions[0].definition;
+                const apiUrl = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word.toLowerCase());
+                console.log('[LOOKUP] API URL:', apiUrl);
+
+                const resp = await fetch(apiUrl);
+                if (!resp.ok) {
+                    console.warn('[LOOKUP] API returned status:', resp.status);
+                    throw new Error('Not found (HTTP ' + resp.status + ')');
                 }
+
+                const data = await resp.json();
+                console.log('[LOOKUP] API response received, entries:', data.length);
+
+                if (!data || data.length === 0) {
+                    console.warn('[LOOKUP] No entries returned from API');
+                    throw new Error('No definition found');
+                }
+
+                const entry = data[0];
+                const returnedWord = entry.word || '';
+                const wordMatch = word.toLowerCase() === returnedWord.toLowerCase();
+
+                console.log('[LOOKUP] Entry word:', returnedWord, '| Match:', wordMatch);
+
+                if (!wordMatch) {
+                    console.warn('[LOOKUP] MISMATCH: Searched for "' + word + '" but got "' + returnedWord + '"');
+                    status.style.background = 'rgba(255, 165, 0, 0.2)';
+                    status.style.color = '#E67E22';
+                    status.innerHTML = '⚠️ Found "<strong>' + returnedWord + '</strong>" instead of "<strong>' + word + '</strong>". ';
+                    const link = document.createElement('a');
+                    link.href = '#';
+                    link.textContent = 'Use this definition?';
+                    link.style.textDecoration = 'underline';
+                    link.onclick = (e) => { e.preventDefault(); showDefinitionPicker(data, word); };
+                    status.appendChild(link);
+                    return;
+                }
+
+                // Collect all definitions from all meanings
+                const allDefs = [];
+                const meanings = entry.meanings || [];
+
+                meanings.forEach((meaning, mIdx) => {
+                    const pos = meaning.partOfSpeech || 'unknown';
+                    const defs = meaning.definitions || [];
+                    defs.forEach((defObj, dIdx) => {
+                        allDefs.push({
+                            text: defObj.definition || '',
+                            pos: pos,
+                            example: defObj.example || '',
+                            meaning_index: mIdx,
+                            def_index: dIdx
+                        });
+                    });
+                });
+
+                console.log('[LOOKUP] Found', allDefs.length, 'definitions across', meanings.length, 'meanings');
+
+                if (allDefs.length === 0) {
+                    console.warn('[LOOKUP] Word found but no definitions available');
+                    throw new Error('Word found but no definitions available');
+                }
+
+                // Get pronunciation
+                let pronunciation = '';
                 if (entry.phonetics) {
                     const ph = entry.phonetics.find(p => p.text) || {};
                     pronunciation = ph.text || '';
                 }
-                if (def && defInput && !defInput.value.trim()) {
-                    defInput.value = def;
+                console.log('[LOOKUP] Pronunciation:', pronunciation);
+
+                // Prioritize definitions: shorter ones tend to be clearer
+                const sortedDefs = [...allDefs].sort((a, b) => {
+                    const lenA = a.text.length;
+                    const lenB = b.text.length;
+                    // Prefer shorter definitions (20-80 chars are usually clearest)
+                    const scoreA = Math.abs(lenA - 50);
+                    const scoreB = Math.abs(lenB - 50);
+                    return scoreA - scoreB;
+                });
+
+                const selectedDef = sortedDefs[0];
+                console.log('[LOOKUP] Selected definition (preferred length):', selectedDef.text.substring(0, 60) + '...');
+
+                if (defInput && !defInput.value.trim()) {
+                    defInput.value = selectedDef.text;
+                    console.log('[LOOKUP] Definition auto-filled');
                 }
+
+                // Show success with option to pick different definition
                 status.style.background = 'rgba(76, 175, 80, 0.2)';
                 status.style.color = 'var(--green)';
-                status.textContent = 'Found! Definition auto-filled.' + (pronunciation ? ' Pronunciation: ' + pronunciation : '');
+                let statusMsg = '✅ Found! Definition auto-filled.';
+                if (pronunciation) statusMsg += ' Pronunciation: ' + pronunciation;
+                if (allDefs.length > 1) {
+                    statusMsg += ' ';
+                    const link = document.createElement('span');
+                    link.innerHTML = '<a href="#" onclick="event.preventDefault(); showDefinitionPicker(' + JSON.stringify(JSON.stringify(allDefs)).replace(/"/g, '&quot;') + ', \'' + word + '\'); return false;" style="text-decoration: underline; cursor: pointer;">(' + allDefs.length + ' definitions available)</a>';
+                    status.innerHTML = statusMsg;
+                    status.appendChild(link.firstChild);
+                } else {
+                    status.textContent = statusMsg;
+                }
+
             } catch (e) {
+                console.error('[LOOKUP] Error:', e.message);
                 status.style.background = 'rgba(232, 133, 110, 0.2)';
                 status.style.color = 'var(--coral)';
-                status.textContent = 'Not found in dictionary — please enter the definition manually.';
+                status.textContent = '❌ ' + (e.message || 'Not found in dictionary') + ' — please enter the definition manually.';
+            }
+        }
+
+        function showDefinitionPicker(data, originalWord) {
+            const entry = data[0];
+            const meanings = entry.meanings || [];
+
+            let html = '<div style="max-height: 400px; overflow-y: auto;">';
+            html += '<p style="margin-bottom: 16px; color: var(--text-muted); font-size: 0.9em;">Choose a definition for <strong>' + (entry.word || originalWord) + '</strong>:</p>';
+
+            const allDefs = [];
+            meanings.forEach((meaning, mIdx) => {
+                const pos = meaning.partOfSpeech || 'unknown';
+                const defs = meaning.definitions || [];
+                defs.forEach((defObj, dIdx) => {
+                    allDefs.push({
+                        text: defObj.definition || '',
+                        pos: pos,
+                        example: defObj.example || '',
+                        meaning_index: mIdx,
+                        def_index: dIdx
+                    });
+                });
+            });
+
+            allDefs.forEach((def, idx) => {
+                html += '<div style="padding: 12px; margin-bottom: 8px; background: rgba(0,0,0,0.02); border-left: 3px solid var(--gold); border-radius: 4px; cursor: pointer;" onclick="selectDefinition(' + idx + ', ' + JSON.stringify(JSON.stringify(def)).replace(/"/g, '&quot;') + ');">';
+                html += '<div style="font-weight: 600; font-size: 0.85em; color: var(--text-muted); margin-bottom: 4px;">(' + def.pos + ')</div>';
+                html += '<div style="color: var(--text); font-size: 0.95em; line-height: 1.5;">' + def.text + '</div>';
+                if (def.example) {
+                    html += '<div style="color: var(--text-muted); font-size: 0.85em; font-style: italic; margin-top: 6px;">Example: ' + def.example + '</div>';
+                }
+                html += '</div>';
+            });
+
+            html += '</div>';
+
+            const defInput = document.getElementById('addWord_definition');
+            defInput.parentElement.insertAdjacentHTML('afterend', '<div id="definitionPickerModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;" onclick="if(event.target.id===\'definitionPickerModal\') document.getElementById(\'definitionPickerModal\').remove()"><div style="background: var(--glass-light); border: var(--border); border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; box-shadow: var(--shadow);">' + html + '</div></div>');
+        }
+
+        function selectDefinition(idx, defStr) {
+            const def = typeof defStr === 'string' ? JSON.parse(defStr) : defStr;
+            const defInput = document.getElementById('addWord_definition');
+            defInput.value = def.text;
+            console.log('[LOOKUP] User selected definition:', def.text.substring(0, 60) + '...');
+            const modal = document.getElementById('definitionPickerModal');
+            if (modal) modal.remove();
+            const status = document.getElementById('addWordLookupStatus');
+            if (status) {
+                status.style.background = 'rgba(76, 175, 80, 0.2)';
+                status.style.color = 'var(--green)';
+                status.textContent = '✅ Definition selected.';
             }
         }
 
