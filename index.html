@@ -4805,187 +4805,228 @@ const aVsBComparisons = {
             }
         }
 
-        let lookupTimer = null;
+        // ── Lookup state ────────────────────────────────────────────
+        let lookupTimer      = null;
+        let lastLookedUpWord = '';   // word that produced the current auto-fill
+        let _lookupAllDefs   = [];   // shared allDefs so the picker never needs serialization
+
         function debounceLookup() {
+            const wordInput = document.getElementById('addWord_word');
+            const defInput  = document.getElementById('addWord_definition');
+            const word      = wordInput ? wordInput.value.trim() : '';
+
+            // If the user keeps typing past the word we already looked up,
+            // clear the auto-filled definition so it doesn't linger
+            if (lastLookedUpWord && word.toLowerCase() !== lastLookedUpWord.toLowerCase()) {
+                console.log('[LOOKUP] Word changed from "' + lastLookedUpWord + '" to "' + word + '" — clearing auto-fill');
+                if (defInput && defInput.dataset.autofilled === 'yes') {
+                    defInput.value = '';
+                    defInput.dataset.autofilled = '';
+                }
+                lastLookedUpWord = '';
+                const status = document.getElementById('addWordLookupStatus');
+                if (status) status.style.display = 'none';
+            }
+
             if (lookupTimer) clearTimeout(lookupTimer);
-            lookupTimer = setTimeout(lookupWord, 600);
+            // Only look up words of 4+ characters to avoid short-prefix false hits
+            if (word.length >= 4) {
+                lookupTimer = setTimeout(lookupWord, 800);
+            }
         }
 
         async function lookupWord() {
             const wordInput = document.getElementById('addWord_word');
-            const defInput = document.getElementById('addWord_definition');
-            const status = document.getElementById('addWordLookupStatus');
-            const word = wordInput ? wordInput.value.trim() : '';
+            const defInput  = document.getElementById('addWord_definition');
+            const status    = document.getElementById('addWordLookupStatus');
+            const word      = wordInput ? wordInput.value.trim() : '';
 
-            if (!word || word.length < 2) {
-                status.style.display = 'none';
-                return;
-            }
+            if (!word || word.length < 4) { if (status) status.style.display = 'none'; return; }
 
             status.style.display = 'block';
             status.style.background = 'var(--glass-light)';
             status.style.color = 'var(--text-muted)';
-            status.textContent = 'Looking up "' + word + '"...';
-
-            console.log('[LOOKUP] Searching for word:', word);
+            status.textContent = 'Looking up "' + word + '"…';
+            console.log('[LOOKUP] Searching for:', word);
 
             try {
                 const apiUrl = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word.toLowerCase());
-                console.log('[LOOKUP] API URL:', apiUrl);
+                console.log('[LOOKUP] URL:', apiUrl);
 
                 const resp = await fetch(apiUrl);
                 if (!resp.ok) {
-                    console.warn('[LOOKUP] API returned status:', resp.status);
-                    throw new Error('Not found (HTTP ' + resp.status + ')');
+                    console.warn('[LOOKUP] HTTP', resp.status, 'for "' + word + '"');
+                    throw new Error('Not found in dictionary (HTTP ' + resp.status + ')');
                 }
 
-                const data = await resp.json();
-                console.log('[LOOKUP] API response received, entries:', data.length);
+                const data  = await resp.json();
+                const entry = data && data[0];
+                console.log('[LOOKUP] Response entries:', data ? data.length : 0);
 
-                if (!data || data.length === 0) {
-                    console.warn('[LOOKUP] No entries returned from API');
-                    throw new Error('No definition found');
-                }
+                if (!entry) throw new Error('Empty response from dictionary');
 
-                const entry = data[0];
-                const returnedWord = entry.word || '';
-                const wordMatch = word.toLowerCase() === returnedWord.toLowerCase();
+                // ── Word-match check ─────────────────────────────────────
+                const returnedWord = (entry.word || '').toLowerCase();
+                const searchedWord = word.toLowerCase();
+                const isMatch      = returnedWord === searchedWord;
+                console.log('[LOOKUP] Returned word: "' + entry.word + '" | Match:', isMatch);
 
-                console.log('[LOOKUP] Entry word:', returnedWord, '| Match:', wordMatch);
-
-                if (!wordMatch) {
-                    console.warn('[LOOKUP] MISMATCH: Searched for "' + word + '" but got "' + returnedWord + '"');
+                if (!isMatch) {
+                    console.warn('[LOOKUP] MISMATCH — searched "' + word + '", got "' + entry.word + '"');
+                    // Build allDefs for the mismatched word so the picker still works
+                    _lookupAllDefs = extractAllDefs(entry);
                     status.style.background = 'rgba(255, 165, 0, 0.2)';
                     status.style.color = '#E67E22';
-                    status.innerHTML = '⚠️ Found "<strong>' + returnedWord + '</strong>" instead of "<strong>' + word + '</strong>". ';
-                    const link = document.createElement('a');
-                    link.href = '#';
-                    link.textContent = 'Use this definition?';
-                    link.style.textDecoration = 'underline';
-                    link.onclick = (e) => { e.preventDefault(); showDefinitionPicker(data, word); };
-                    status.appendChild(link);
+                    status.innerHTML = '';
+                    status.appendChild(document.createTextNode('⚠️ Found "'));
+                    const b1 = document.createElement('strong'); b1.textContent = entry.word; status.appendChild(b1);
+                    status.appendChild(document.createTextNode('" instead of "'));
+                    const b2 = document.createElement('strong'); b2.textContent = word; status.appendChild(b2);
+                    status.appendChild(document.createTextNode('". '));
+                    if (_lookupAllDefs.length) {
+                        const a = document.createElement('a');
+                        a.href = '#'; a.textContent = 'Use anyway?';
+                        a.style.textDecoration = 'underline';
+                        a.onclick = (e) => { e.preventDefault(); showDefinitionPicker(entry.word); };
+                        status.appendChild(a);
+                    }
                     return;
                 }
 
-                // Collect all definitions from all meanings
-                const allDefs = [];
-                const meanings = entry.meanings || [];
+                // ── Collect all definitions ──────────────────────────────
+                _lookupAllDefs = extractAllDefs(entry);
+                console.log('[LOOKUP] Definitions found:', _lookupAllDefs.length, 'across', (entry.meanings || []).length, 'meanings');
 
-                meanings.forEach((meaning, mIdx) => {
-                    const pos = meaning.partOfSpeech || 'unknown';
-                    const defs = meaning.definitions || [];
-                    defs.forEach((defObj, dIdx) => {
-                        allDefs.push({
-                            text: defObj.definition || '',
-                            pos: pos,
-                            example: defObj.example || '',
-                            meaning_index: mIdx,
-                            def_index: dIdx
-                        });
-                    });
-                });
+                if (!_lookupAllDefs.length) throw new Error('Word found but no definitions returned');
 
-                console.log('[LOOKUP] Found', allDefs.length, 'definitions across', meanings.length, 'meanings');
+                // ── Pronunciation ────────────────────────────────────────
+                const ph = (entry.phonetics || []).find(p => p.text) || {};
+                const pronunciation = ph.text || '';
+                console.log('[LOOKUP] Pronunciation:', pronunciation || '(none)');
 
-                if (allDefs.length === 0) {
-                    console.warn('[LOOKUP] Word found but no definitions available');
-                    throw new Error('Word found but no definitions available');
+                // ── Pick best definition (closest to 60 chars = clear & concise) ──
+                const sorted = [..._lookupAllDefs].sort((a, b) =>
+                    Math.abs(a.text.length - 60) - Math.abs(b.text.length - 60)
+                );
+                const best = sorted[0];
+                console.log('[LOOKUP] Selected definition:', best.text.substring(0, 80));
+
+                // Only auto-fill if definition field is empty or was previously auto-filled by us
+                if (defInput && (!defInput.value.trim() || defInput.dataset.autofilled === 'yes')) {
+                    defInput.value = best.text;
+                    defInput.dataset.autofilled = 'yes';
+                    lastLookedUpWord = word;
+                    console.log('[LOOKUP] Auto-filled definition for "' + word + '"');
                 }
 
-                // Get pronunciation
-                let pronunciation = '';
-                if (entry.phonetics) {
-                    const ph = entry.phonetics.find(p => p.text) || {};
-                    pronunciation = ph.text || '';
-                }
-                console.log('[LOOKUP] Pronunciation:', pronunciation);
-
-                // Prioritize definitions: shorter ones tend to be clearer
-                const sortedDefs = [...allDefs].sort((a, b) => {
-                    const lenA = a.text.length;
-                    const lenB = b.text.length;
-                    // Prefer shorter definitions (20-80 chars are usually clearest)
-                    const scoreA = Math.abs(lenA - 50);
-                    const scoreB = Math.abs(lenB - 50);
-                    return scoreA - scoreB;
-                });
-
-                const selectedDef = sortedDefs[0];
-                console.log('[LOOKUP] Selected definition (preferred length):', selectedDef.text.substring(0, 60) + '...');
-
-                if (defInput && !defInput.value.trim()) {
-                    defInput.value = selectedDef.text;
-                    console.log('[LOOKUP] Definition auto-filled');
-                }
-
-                // Show success with option to pick different definition
+                // ── Status message ───────────────────────────────────────
                 status.style.background = 'rgba(76, 175, 80, 0.2)';
                 status.style.color = 'var(--green)';
-                let statusMsg = '✅ Found! Definition auto-filled.';
-                if (pronunciation) statusMsg += ' Pronunciation: ' + pronunciation;
-                if (allDefs.length > 1) {
-                    statusMsg += ' ';
-                    const link = document.createElement('span');
-                    link.innerHTML = '<a href="#" onclick="event.preventDefault(); showDefinitionPicker(' + JSON.stringify(JSON.stringify(allDefs)).replace(/"/g, '&quot;') + ', \'' + word + '\'); return false;" style="text-decoration: underline; cursor: pointer;">(' + allDefs.length + ' definitions available)</a>';
-                    status.innerHTML = statusMsg;
-                    status.appendChild(link.firstChild);
-                } else {
-                    status.textContent = statusMsg;
+                status.innerHTML = '';
+                status.appendChild(document.createTextNode('✅ Found!'));
+                if (pronunciation) {
+                    const span = document.createElement('span');
+                    span.style.marginLeft = '6px';
+                    span.style.color = 'var(--text-muted)';
+                    span.textContent = pronunciation;
+                    status.appendChild(span);
+                }
+                if (_lookupAllDefs.length > 1) {
+                    status.appendChild(document.createTextNode(' '));
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.textContent = '(' + _lookupAllDefs.length + ' definitions — pick one)';
+                    a.style.textDecoration = 'underline';
+                    a.onclick = (e) => { e.preventDefault(); showDefinitionPicker(word); };
+                    status.appendChild(a);
                 }
 
             } catch (e) {
-                console.error('[LOOKUP] Error:', e.message);
+                console.error('[LOOKUP] Error for "' + word + '":', e.message);
                 status.style.background = 'rgba(232, 133, 110, 0.2)';
                 status.style.color = 'var(--coral)';
-                status.textContent = '❌ ' + (e.message || 'Not found in dictionary') + ' — please enter the definition manually.';
+                status.textContent = '❌ ' + e.message + ' — please type the definition manually.';
             }
         }
 
-        function showDefinitionPicker(data, originalWord) {
-            const entry = data[0];
-            const meanings = entry.meanings || [];
-
-            let html = '<div style="max-height: 400px; overflow-y: auto;">';
-            html += '<p style="margin-bottom: 16px; color: var(--text-muted); font-size: 0.9em;">Choose a definition for <strong>' + (entry.word || originalWord) + '</strong>:</p>';
-
-            const allDefs = [];
-            meanings.forEach((meaning, mIdx) => {
-                const pos = meaning.partOfSpeech || 'unknown';
-                const defs = meaning.definitions || [];
-                defs.forEach((defObj, dIdx) => {
-                    allDefs.push({
-                        text: defObj.definition || '',
-                        pos: pos,
-                        example: defObj.example || '',
-                        meaning_index: mIdx,
-                        def_index: dIdx
-                    });
+        // ── Helper: flatten all definitions from an API entry ────────────
+        function extractAllDefs(entry) {
+            const defs = [];
+            (entry.meanings || []).forEach(meaning => {
+                (meaning.definitions || []).forEach(defObj => {
+                    if (defObj.definition) {
+                        defs.push({
+                            text:    defObj.definition,
+                            pos:     meaning.partOfSpeech || '',
+                            example: defObj.example || ''
+                        });
+                    }
                 });
             });
-
-            allDefs.forEach((def, idx) => {
-                html += '<div style="padding: 12px; margin-bottom: 8px; background: rgba(0,0,0,0.02); border-left: 3px solid var(--gold); border-radius: 4px; cursor: pointer;" onclick="selectDefinition(' + idx + ', ' + JSON.stringify(JSON.stringify(def)).replace(/"/g, '&quot;') + ');">';
-                html += '<div style="font-weight: 600; font-size: 0.85em; color: var(--text-muted); margin-bottom: 4px;">(' + def.pos + ')</div>';
-                html += '<div style="color: var(--text); font-size: 0.95em; line-height: 1.5;">' + def.text + '</div>';
-                if (def.example) {
-                    html += '<div style="color: var(--text-muted); font-size: 0.85em; font-style: italic; margin-top: 6px;">Example: ' + def.example + '</div>';
-                }
-                html += '</div>';
-            });
-
-            html += '</div>';
-
-            const defInput = document.getElementById('addWord_definition');
-            defInput.parentElement.insertAdjacentHTML('afterend', '<div id="definitionPickerModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;" onclick="if(event.target.id===\'definitionPickerModal\') document.getElementById(\'definitionPickerModal\').remove()"><div style="background: var(--glass-light); border: var(--border); border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; box-shadow: var(--shadow);">' + html + '</div></div>');
+            return defs;
         }
 
-        function selectDefinition(idx, defStr) {
-            const def = typeof defStr === 'string' ? JSON.parse(defStr) : defStr;
+        // ── Definition picker modal (reads from _lookupAllDefs) ──────────
+        function showDefinitionPicker(displayWord) {
+            const existing = document.getElementById('definitionPickerModal');
+            if (existing) existing.remove();
+
+            if (!_lookupAllDefs.length) {
+                console.warn('[LOOKUP] showDefinitionPicker called but _lookupAllDefs is empty');
+                return;
+            }
+
+            console.log('[LOOKUP] Opening picker for "' + displayWord + '" with', _lookupAllDefs.length, 'definitions');
+
+            const overlay = document.createElement('div');
+            overlay.id = 'definitionPickerModal';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+            const card = document.createElement('div');
+            card.style.cssText = 'background:var(--glass-light);border:var(--border);border-radius:12px;padding:24px;max-width:520px;width:100%;box-shadow:var(--shadow);max-height:80vh;display:flex;flex-direction:column;';
+
+            const title = document.createElement('p');
+            title.innerHTML = 'Choose a definition for <strong>' + displayWord + '</strong>';
+            title.style.cssText = 'margin-bottom:16px;color:var(--text-muted);font-size:0.9em;flex-shrink:0;';
+            card.appendChild(title);
+
+            const list = document.createElement('div');
+            list.style.cssText = 'overflow-y:auto;flex:1;';
+
+            _lookupAllDefs.forEach((def, idx) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'padding:12px;margin-bottom:8px;background:rgba(0,0,0,0.02);border-left:3px solid var(--gold);border-radius:4px;cursor:pointer;';
+                row.onmouseenter = () => row.style.background = 'rgba(0,0,0,0.05)';
+                row.onmouseleave = () => row.style.background = 'rgba(0,0,0,0.02)';
+
+                let inner = '';
+                if (def.pos) inner += '<div style="font-weight:700;font-size:0.8em;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">' + def.pos + '</div>';
+                inner += '<div style="color:var(--text);font-size:0.95em;line-height:1.5;">' + def.text + '</div>';
+                if (def.example) inner += '<div style="color:var(--text-muted);font-size:0.85em;font-style:italic;margin-top:6px;">"' + def.example + '"</div>';
+                row.innerHTML = inner;
+
+                row.onclick = () => selectDefinition(idx);
+                list.appendChild(row);
+            });
+
+            card.appendChild(list);
+            overlay.appendChild(card);
+            document.body.appendChild(overlay);
+        }
+
+        function selectDefinition(idx) {
+            const def = _lookupAllDefs[idx];
+            if (!def) { console.error('[LOOKUP] selectDefinition: index', idx, 'out of range'); return; }
+
             const defInput = document.getElementById('addWord_definition');
             defInput.value = def.text;
-            console.log('[LOOKUP] User selected definition:', def.text.substring(0, 60) + '...');
+            defInput.dataset.autofilled = 'yes';
+            console.log('[LOOKUP] User picked definition #' + idx + ':', def.text.substring(0, 80));
+
             const modal = document.getElementById('definitionPickerModal');
             if (modal) modal.remove();
+
             const status = document.getElementById('addWordLookupStatus');
             if (status) {
                 status.style.background = 'rgba(76, 175, 80, 0.2)';
