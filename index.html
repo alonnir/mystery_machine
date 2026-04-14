@@ -4805,6 +4805,34 @@ const aVsBComparisons = {
             }
         }
 
+        // ── Category classifier ──────────────────────────────────────
+        function guessCategory(word, defs, posStr) {
+            // Build a single lowercase corpus: word + all definitions + examples
+            const corpus = (word + ' ' + defs.map(d => d.text + ' ' + d.example).join(' ')).toLowerCase();
+            const pos    = posStr.toLowerCase();
+
+            const matches = (pattern) => pattern.test(corpus);
+
+            // Ordered from most specific to most general
+            if (matches(/\b(disease|diagnosis|symptom|treatment|patient|clinical|anatomy|physiology|surgery|pharmaceutical|medication|dose|hospital|physician|prognosis|chronic|acute|infection|therapy)\b/)) return 'medical';
+            if (matches(/\b(law|legal|court|judge|contract|statute|tort|liability|plaintiff|defendant|attorney|jurisdiction|verdict|criminal|civil|judicial|legislation|barrister|solicitor|indictment|acquittal)\b/)) return 'legal';
+            if (matches(/\b(finance|financial|invest|stock|market|economy|economic|profit|revenue|asset|capital|dividend|equity|budget|fiscal|monetary|fund|debt|interest rate|portfolio)\b/)) return 'finance';
+            if (matches(/\b(science|scientific|experiment|hypothesis|theory|biology|chemistry|physics|molecule|atom|cell|organism|gene|evolution|quantum|neural|algorithm|data|compute|technology)\b/)) return 'science';
+            if (matches(/\b(literary|literature|poetry|poem|narrative|prose|metaphor|allegory|rhetoric|fiction|novel|satire|irony|motif|protagonist|antagonist|genre|stanza|verse)\b/)) return 'literary';
+            if (matches(/\b(philosophy|philosophical|logic|argument|thesis|epistemology|ontology|ethics|morality|dialectic|empirical|rational|axiom|paradox|inference|syllogism)\b/)) return 'academic';
+            if (matches(/\b(feel|emotion|feeling|mood|sentiment|passion|affection|fear|joy|anger|sadness|anxiety|grief|empathy|melancholy|elation|longing|nostalgia|guilt|shame|pride)\b/)) return 'emotions';
+            if (matches(/\b(good|excellent|wonderful|beautiful|kind|generous|benefit|advantage|success|improve|flourish|prosper|admirable|virtuous|noble|gracious|benevolent|commendable)\b/)) return 'positive';
+            if (matches(/\b(bad|evil|harm|damage|corrupt|malicious|vile|wicked|terrible|awful|hostile|sinister|nefarious|malevolent|depraved|contemptible|reprehensible)\b/)) return 'negative';
+            if (matches(/\b(formal|official|ceremonial|professional|diplomatic|institutional|authoritative|bureaucratic|solemn|decorum|protocol|etiquette)\b/)) return 'formal';
+
+            // Part-of-speech fallbacks
+            if (/\bverb\b/.test(pos))      return 'actions';
+            if (/\badjective\b/.test(pos)) return 'descriptive';
+            if (/\bnoun\b/.test(pos) && matches(/\b(concept|idea|notion|principle|belief|value|quality|attribute|essence|phenomenon|abstraction)\b/)) return 'abstract';
+
+            return 'uncategorised';
+        }
+
         // ── Lookup state ────────────────────────────────────────────
         let lookupTimer      = null;
         let lastLookedUpWord = '';   // word that produced the current auto-fill
@@ -4917,6 +4945,15 @@ const aVsBComparisons = {
                     defInput.dataset.autofilled = 'yes';
                     lastLookedUpWord = word;
                     console.log('[LOOKUP] Auto-filled definition for "' + word + '"');
+                }
+
+                // ── Auto-select category ─────────────────────────────────
+                const allPos = (entry.meanings || []).map(m => m.partOfSpeech || '').join(' ');
+                const guessed = guessCategory(word, _lookupAllDefs, allPos);
+                const catEl = document.getElementById('addWord_category');
+                if (catEl) {
+                    catEl.value = guessed;
+                    console.log('[LOOKUP] Auto-selected category: "' + guessed + '" (pos: "' + allPos.trim() + '")');
                 }
 
                 // ── Status message ───────────────────────────────────────
